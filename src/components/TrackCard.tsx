@@ -4,6 +4,15 @@ import { useAuth } from "../context/AuthContext";
 import type { Track } from "../data/mockData";
 import { formatTime } from "../data/mockData";
 
+function SourceBadge({ source }: { source: Track["source"] }) {
+  if (!source || source === "local") return null;
+  return (
+    <span className="inline-block text-[9px] font-mono uppercase tracking-widest px-1.5 py-0.5 rounded bg-[#1a1a1a] border border-[#222] text-neutral-500 shrink-0">
+      {source}
+    </span>
+  );
+}
+
 type Variant = "card" | "row";
 
 export function TrackCard({
@@ -37,7 +46,7 @@ export function TrackCard({
   if (variant === "row") {
     return (
       <div
-        className={`group grid grid-cols-[24px_56px_1fr_1fr_auto_24px] gap-4 items-center px-3 py-2 rounded-md hover:bg-[#161616] cursor-pointer ${
+        className={`group grid grid-cols-[24px_56px_1fr_1fr_auto_auto_24px] gap-4 items-center px-3 py-2 rounded-md hover:bg-[#161616] cursor-pointer ${
           isCurrent ? "accent-soft-bg" : ""
         }`}
         onClick={handlePlay}
@@ -59,6 +68,7 @@ export function TrackCard({
           <div className="text-xs text-neutral-400 truncate">{track.artist}</div>
         </div>
         <div className="text-xs text-neutral-400 truncate">{track.album}</div>
+        <SourceBadge source={track.source} />
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -106,6 +116,7 @@ export function TrackCard({
         {track.title}
       </div>
       <div className="text-xs text-neutral-400 truncate">{track.artist}</div>
+      <SourceBadge source={track.source} />
     </div>
   );
 }
