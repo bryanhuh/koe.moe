@@ -250,6 +250,29 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
   }, [isPlaying]);
 
+  // Media Session — metadata
+  useEffect(() => {
+    if (!("mediaSession" in navigator)) return;
+    if (currentTrack) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: currentTrack.title,
+        artist: currentTrack.artist,
+        album: currentTrack.album,
+        artwork: currentTrack.coverUrl
+          ? [{ src: currentTrack.coverUrl, sizes: "512x512", type: "image/jpeg" }]
+          : [],
+      });
+    } else {
+      navigator.mediaSession.metadata = null;
+    }
+  }, [currentTrack]);
+
+  // Media Session — playback state
+  useEffect(() => {
+    if (!("mediaSession" in navigator)) return;
+    navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
+  }, [isPlaying]);
+
   const handleEnded = useCallback(() => {
     setProgress(0);
     if (repeat === "one") {
@@ -415,6 +438,25 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       return idx;
     });
   }, []);
+
+  // Media Session — action handlers (re-registers when callbacks change)
+  useEffect(() => {
+    if (!("mediaSession" in navigator)) return;
+    const ms = navigator.mediaSession;
+    ms.setActionHandler("play", () => setIsPlaying(true));
+    ms.setActionHandler("pause", () => setIsPlaying(false));
+    ms.setActionHandler("previoustrack", prev);
+    ms.setActionHandler("nexttrack", next);
+    ms.setActionHandler("seekto", (d) => {
+      if (d.seekTime != null) seek(d.seekTime);
+    });
+    ms.setActionHandler("seekbackward", (d) => {
+      seek(Math.max(0, (audioRef.current?.currentTime ?? 0) - (d.seekOffset ?? 10)));
+    });
+    ms.setActionHandler("seekforward", (d) => {
+      seek((audioRef.current?.currentTime ?? 0) + (d.seekOffset ?? 10));
+    });
+  }, [prev, next, seek]);
 
   const value: PlayerState = {
     queue,
