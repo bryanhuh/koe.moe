@@ -1,57 +1,86 @@
 import { useEffect, useState } from "react";
-import { HeroBanner } from "../components/HeroBanner";
-import { AlbumGrid } from "../components/AlbumGrid";
 import { PageHeader } from "../components/PageHeader";
-import { albums, albumById, featuredAlbumId } from "../data/mockData";
 import { TrackCard } from "../components/TrackCard";
 import { jamendo } from "../lib/sources/jamendo";
+import { audius } from "../lib/sources/audius";
 import { usePlayer } from "../context/PlayerContext";
+import { curatedRows } from "../data/curated";
 import type { Track } from "../data/mockData";
+import type { CuratedRow } from "../data/curated";
 
-export default function Home() {
-  const featured = albumById(featuredAlbumId)!;
-  const listenNow = albums.filter((a) => a.id !== featured.id).slice(0, 3);
+function getGreeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 18) return "Good afternoon";
+  return "Good evening";
+}
 
-  const [trendingTracks, setTrendingTracks] = useState<Track[]>([]);
+function SkeletonGrid() {
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div
+          key={i}
+          className="bg-[#121212] border border-[#1a1a1a] rounded-lg aspect-square animate-pulse"
+        />
+      ))}
+    </div>
+  );
+}
+
+function CuratedSection({ row }: { row: CuratedRow }) {
+  const [tracks, setTracks] = useState<Track[] | null>(null);
   const { registerTracks } = usePlayer();
 
   useEffect(() => {
-    jamendo.getFeatured(8).then((tracks) => {
-      registerTracks(tracks);
-      setTrendingTracks(tracks);
-    }).catch(() => {});
-  }, [registerTracks]);
+    const src = row.source === "jamendo" ? jamendo : audius;
+    const fetch =
+      row.type === "featured"
+        ? src.getFeatured(row.limit)
+        : src.search(row.query, row.limit);
 
-  const trackIds = trendingTracks.map((t) => t.id);
+    fetch
+      .then((t) => {
+        registerTracks(t);
+        setTracks(t);
+      })
+      .catch(() => setTracks([]));
+  }, [row, registerTracks]);
+
+  // Hide rows that returned no results (e.g. Jamendo with no CLIENT_ID)
+  if (tracks !== null && tracks.length === 0) return null;
+
+  const queueIds = (tracks ?? []).map((t) => t.id);
 
   return (
+    <section>
+      <PageHeader title={row.title} subtitle={row.subtitle} />
+      {tracks !== null ? (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {tracks.slice(0, 4).map((t) => (
+            <TrackCard key={t.id} track={t} queueIds={queueIds} />
+          ))}
+        </div>
+      ) : (
+        <SkeletonGrid />
+      )}
+    </section>
+  );
+}
+
+export default function Home() {
+  return (
     <div className="space-y-10">
-      <HeroBanner album={featured} />
+      <div>
+        <p className="text-xs font-mono uppercase tracking-[0.2em] text-neutral-500 mb-1">
+          {getGreeting()}
+        </p>
+        <h1 className="text-3xl font-bold text-white">Discover Music</h1>
+      </div>
 
-      <section>
-        <PageHeader eyebrow="" title="Listen Now" subtitle="Recently played albums" />
-        <AlbumGrid albums={listenNow} columns={3} />
-      </section>
-
-      <section>
-        <PageHeader title="Trending on Jamendo" subtitle="Popular free tracks this week" />
-        {trendingTracks.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {trendingTracks.slice(0, 4).map((t) => (
-              <TrackCard key={t.id} track={t} queueIds={trackIds} />
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div
-                key={i}
-                className="bg-[#121212] border border-[#1a1a1a] rounded-lg aspect-square animate-pulse"
-              />
-            ))}
-          </div>
-        )}
-      </section>
+      {curatedRows.map((row) => (
+        <CuratedSection key={row.id} row={row} />
+      ))}
     </div>
   );
 }
