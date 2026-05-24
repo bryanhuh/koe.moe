@@ -39,15 +39,9 @@ export type Playlist = {
 const cover = (seed: string, size = 600) =>
   `https://picsum.photos/seed/koe-${seed}/${size}/${size}`;
 
-// Royalty-free short audio clips (Google's actor + bell + chime samples — guaranteed CORS-friendly)
-const SAMPLE_AUDIO = [
-  "https://www.soundjay.com/buttons/sounds/button-1.mp3",
-  "https://actions.google.com/sounds/v1/ambiences/coffee_shop.ogg",
-  "https://actions.google.com/sounds/v1/ambiences/forest_morning.ogg",
-  "https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg",
-];
-
-const audio = (i: number) => SAMPLE_AUDIO[i % SAMPLE_AUDIO.length];
+// Real stream URLs will come from the Jamendo/Audius source abstraction (catalog milestone).
+// Until then every track returns an empty string so the audio element loads nothing.
+const audio = (_i: number) => "";
 
 export const artists: Artist[] = [
   {
