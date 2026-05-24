@@ -1,5 +1,6 @@
 import { Play, Heart, Pause } from "lucide-react";
 import { usePlayer } from "../context/PlayerContext";
+import { useAuth } from "../context/AuthContext";
 import type { Track } from "../data/mockData";
 import { formatTime } from "../data/mockData";
 
@@ -24,6 +25,7 @@ export function TrackCard({
     toggleFavorite,
     isFavorite,
   } = usePlayer();
+  const { requireAuth } = useAuth();
   const isCurrent = currentTrack?.id === track.id;
   const showPause = isCurrent && isPlaying;
 
@@ -60,7 +62,7 @@ export function TrackCard({
         <button
           onClick={(e) => {
             e.stopPropagation();
-            toggleFavorite(track.id);
+            requireAuth(() => toggleFavorite(track.id));
           }}
           className={`opacity-0 group-hover:opacity-100 ${
             isFavorite(track.id) ? "accent-text opacity-100" : "text-neutral-400"
