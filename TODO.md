@@ -29,12 +29,12 @@ Goal: ship a public PWA that lets a stranger browse free streaming catalogs, sig
 
 ### Catalog
 
-- [ ] Streaming-source abstraction: `src/lib/sources/{jamendo,audius}.ts` exposing a common `Source` interface (`search`, `getTrack`, `getStreamUrl`) _(`feat(catalog):`)_
-- [ ] Wire Jamendo as first source, replace Home mock data with real results _(`feat(catalog):`)_
-- [ ] Add Audius as second source _(`feat(catalog):`)_
-- [ ] Cross-source unified search with simple weighted relevance scorer _(`feat(search):`)_
-- [ ] Debounced instant search input (~250ms) _(`feat(search):`)_
-- [ ] Source badge on every track row/card (small icon + label) _(`feat(catalog):`)_
+- [x] Streaming-source abstraction: `src/lib/sources/{jamendo,audius}.ts` exposing a common `Source` interface (`search`, `getTrack`, `getStreamUrl`) _(`feat(catalog):`)_
+- [x] Wire Jamendo as first source, replace Home mock data with real results _(`feat(catalog):`)_
+- [x] Add Audius as second source _(`feat(catalog):`)_
+- [x] Cross-source unified search with simple weighted relevance scorer _(`feat(search):`)_
+- [x] Debounced instant search input (~250ms) _(`feat(search):`)_
+- [x] Source badge on every track row/card (small icon + label) _(`feat(catalog):`)_
 
 ### Local uploads
 
