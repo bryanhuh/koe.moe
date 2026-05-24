@@ -4,29 +4,34 @@ import { PageHeader } from "../components/PageHeader";
 import { playlists as initialPlaylists } from "../data/mockData";
 import type { Playlist } from "../data/mockData";
 import { usePlayer } from "../context/PlayerContext";
+import { useAuth } from "../context/AuthContext";
 
 export default function Playlists() {
   const [playlists, setPlaylists] = useState<Playlist[]>(initialPlaylists);
   const [name, setName] = useState("");
   const [desc, setDesc] = useState("");
   const { playAlbum } = usePlayer();
+  const { requireAuth } = useAuth();
 
-  const create = () => {
-    if (!name.trim()) return;
+  const doCreate = () => {
     const id = `pl-${Date.now()}`;
-    const seed = id;
     setPlaylists((p) => [
       ...p,
       {
         id,
         name: name.trim(),
         description: desc.trim(),
-        coverUrl: `https://picsum.photos/seed/koe-${seed}/600/600`,
+        coverUrl: `https://picsum.photos/seed/koe-${id}/600/600`,
         trackIds: [],
       },
     ]);
     setName("");
     setDesc("");
+  };
+
+  const create = () => {
+    if (!name.trim()) return;
+    requireAuth(doCreate);
   };
 
   return (
