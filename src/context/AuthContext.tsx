@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
@@ -9,6 +9,11 @@ type AuthState = {
   loading: boolean;
   signInWithMagicLink: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
+  // Signup wall
+  signupWallOpen: boolean;
+  openSignupWall: () => void;
+  closeSignupWall: () => void;
+  requireAuth: (action: () => void) => void;
 };
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -16,6 +21,17 @@ const AuthContext = createContext<AuthState | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [signupWallOpen, setSignupWallOpen] = useState(false);
+
+  const openSignupWall = useCallback(() => setSignupWallOpen(true), []);
+  const closeSignupWall = useCallback(() => setSignupWallOpen(false), []);
+  const requireAuth = useCallback(
+    (action: () => void) => {
+      if (session) action();
+      else setSignupWallOpen(true);
+    },
+    [session],
+  );
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -52,6 +68,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         signInWithMagicLink,
         signOut,
+        signupWallOpen,
+        openSignupWall,
+        closeSignupWall,
+        requireAuth,
       }}
     >
       {children}
