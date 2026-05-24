@@ -53,7 +53,7 @@ Goal: ship a public PWA that lets a stranger browse free streaming catalogs, sig
 
 ### Mobile
 
-- [ ] Responsive: sidebar collapses to bottom nav at `<md` breakpoint _(`feat(mobile):`)_
+- [x] Responsive: sidebar collapses to bottom nav at `<md` breakpoint _(`feat(mobile):`)_
 
 ### PWA
 
