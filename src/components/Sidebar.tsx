@@ -45,7 +45,7 @@ export function Sidebar() {
 
   return (
     <aside
-      className={`${width} shrink-0 h-full bg-[#0d0d0d] border-r border-[#1a1a1a] flex flex-col transition-[width] duration-200`}
+      className={`${width} hidden md:flex flex-col shrink-0 h-full bg-[#0d0d0d] border-r border-[#1a1a1a] transition-[width] duration-200`}
     >
       <div className="h-16 flex items-center justify-between px-4 border-b border-[#1a1a1a]">
         {!collapsed && (

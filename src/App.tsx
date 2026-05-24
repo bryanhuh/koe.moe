@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { PlayerProvider } from "./context/PlayerContext";
 import { AuthProvider } from "./context/AuthContext";
 import { Sidebar } from "./components/Sidebar";
+import { BottomNav } from "./components/BottomNav";
 import { Player } from "./components/Player";
 import Home from "./pages/Home";
 import Search from "./pages/Search";
@@ -30,7 +31,7 @@ function App() {
                   <div className="flex flex-1 min-h-0">
                     <Sidebar />
                     <main className="flex-1 min-w-0 overflow-y-auto">
-                      <div className="px-8 py-8 max-w-[1600px] mx-auto pb-16">
+                      <div className="px-4 py-6 md:px-8 md:py-8 max-w-[1600px] mx-auto pb-16">
                         <Routes>
                           <Route path="/" element={<Home />} />
                           <Route path="/search" element={<Search />} />
@@ -47,6 +48,7 @@ function App() {
                     </main>
                   </div>
                   <Player />
+                  <BottomNav />
                 </div>
               }
             />
