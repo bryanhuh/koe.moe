@@ -8,7 +8,7 @@ import {
   useState,
 } from "react";
 import type { ReactNode } from "react";
-import { tracks as allTracks, trackById } from "../data/mockData";
+import { tracks as allTracks } from "../data/mockData";
 import type { Track } from "../data/mockData";
 
 export type RepeatMode = "off" | "all" | "one";
@@ -49,6 +49,7 @@ type PlayerState = {
   accent: string;
 
   // actions
+  registerTracks: (tracks: Track[]) => void;
   playTrack: (trackId: string, queueIds?: string[]) => void;
   playAlbum: (trackIds: string[], startId?: string) => void;
   togglePlay: () => void;
@@ -131,9 +132,13 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     audioRef.current.preload = "metadata";
   }
 
+  const trackCacheRef = useRef<Map<string, Track>>(
+    new Map(allTracks.map((t) => [t.id, t])),
+  );
+
   const currentTrack: Track | null =
     currentIndex >= 0 && currentIndex < queue.length
-      ? trackById(queue[currentIndex]) ?? null
+      ? (trackCacheRef.current.get(queue[currentIndex]) ?? null)
       : null;
 
   // Persist
@@ -286,6 +291,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     [shuffle],
   );
 
+  const registerTracks = useCallback((tracks: Track[]) => {
+    for (const t of tracks) trackCacheRef.current.set(t.id, t);
+  }, []);
+
   const playAlbum = useCallback(
     (trackIds: string[], startId?: string) => {
       const start = startId ?? trackIds[0];
@@ -417,6 +426,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     logs,
     settings: settingsState,
     accent,
+    registerTracks,
     playTrack,
     playAlbum,
     togglePlay,
