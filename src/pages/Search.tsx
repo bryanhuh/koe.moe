@@ -1,53 +1,71 @@
-import { useMemo, useState } from "react";
-import { Search as SearchIcon } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Loader2, Search as SearchIcon } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { TrackCard } from "../components/TrackCard";
-import { AlbumGrid } from "../components/AlbumGrid";
-import { ArtistGrid } from "../components/ArtistGrid";
-import { albums, artists, tracks } from "../data/mockData";
+import { jamendo } from "../lib/sources/jamendo";
+import { audius } from "../lib/sources/audius";
+import { usePlayer } from "../context/PlayerContext";
+import type { Track } from "../data/mockData";
 
-type Filter = "all" | "songs" | "artists" | "albums";
+function scoreTrack(t: Track, term: string): number {
+  const title = t.title.toLowerCase();
+  const artist = t.artist.toLowerCase();
+  let score = 0;
+  if (title.startsWith(term)) score += 3;
+  else if (title.includes(term)) score += 2;
+  if (artist.includes(term)) score += 1;
+  return score;
+}
 
 export default function Search() {
   const [q, setQ] = useState("");
-  const [filter, setFilter] = useState<Filter>("all");
+  const [tracks, setTracks] = useState<Track[]>([]);
+  const [loading, setLoading] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { registerTracks } = usePlayer();
 
-  const term = q.trim().toLowerCase();
+  useEffect(() => {
+    const term = q.trim();
+    if (!term) {
+      setTracks([]);
+      setLoading(false);
+      return;
+    }
 
-  const matched = useMemo(() => {
-    if (!term)
-      return {
-        tracks: [] as typeof tracks,
-        albums: [] as typeof albums,
-        artists: [] as typeof artists,
-      };
-    return {
-      tracks: tracks.filter(
-        (t) =>
-          t.title.toLowerCase().includes(term) ||
-          t.artist.toLowerCase().includes(term) ||
-          t.album.toLowerCase().includes(term),
-      ),
-      albums: albums.filter(
-        (a) =>
-          a.title.toLowerCase().includes(term) ||
-          a.artist.toLowerCase().includes(term),
-      ),
-      artists: artists.filter((a) => a.name.toLowerCase().includes(term)),
+    setLoading(true);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    debounceRef.current = setTimeout(async () => {
+      const [jRes, aRes] = await Promise.allSettled([
+        jamendo.search(term, 10),
+        audius.search(term, 10),
+      ]);
+
+      const merged: Track[] = [
+        ...(jRes.status === "fulfilled" ? jRes.value : []),
+        ...(aRes.status === "fulfilled" ? aRes.value : []),
+      ];
+
+      const termLower = term.toLowerCase();
+      merged.sort((a, b) => scoreTrack(b, termLower) - scoreTrack(a, termLower));
+
+      registerTracks(merged);
+      setTracks(merged);
+      setLoading(false);
+    }, 250);
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [term]);
+  }, [q, registerTracks]);
 
-  const showSongs = filter === "all" || filter === "songs";
-  const showArtists = filter === "all" || filter === "artists";
-  const showAlbums = filter === "all" || filter === "albums";
-
-  const filters: Filter[] = ["all", "songs", "artists", "albums"];
+  const queueIds = tracks.map((t) => t.id);
 
   return (
     <div>
       <PageHeader eyebrow="Discover" title="Search" />
 
-      <div className="relative mb-5">
+      <div className="relative mb-6">
         <SearchIcon
           size={16}
           className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500"
@@ -55,81 +73,41 @@ export default function Search() {
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search songs, artists, albums…"
+          placeholder="Search songs across Jamendo and Audius…"
           autoFocus
           className="w-full bg-[#121212] border border-[#222] rounded-md py-2.5 pl-9 pr-4 text-sm placeholder:text-neutral-500 focus:outline-none focus:border-[#444]"
         />
+        {loading && (
+          <Loader2
+            size={14}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 animate-spin"
+          />
+        )}
       </div>
 
-      <div className="flex items-center gap-2 mb-6">
-        {filters.map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`px-3 py-1 rounded-full text-xs font-mono uppercase tracking-wide border ${
-              filter === f
-                ? "accent-bg text-black border-transparent"
-                : "border-[#222] text-neutral-400 hover:text-white"
-            }`}
-          >
-            {f}
-          </button>
-        ))}
-      </div>
-
-      {!term && (
+      {!q.trim() && (
         <div className="text-neutral-500 text-sm">
           Type something to start searching.
         </div>
       )}
 
-      {term && (
-        <div className="space-y-8">
-          {showSongs && matched.tracks.length > 0 && (
-            <section>
-              <h2 className="text-sm font-mono uppercase tracking-wide text-neutral-300 mb-3">
-                Songs ({matched.tracks.length})
-              </h2>
-              <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-lg p-2">
-                {matched.tracks.map((t, i) => (
-                  <TrackCard
-                    key={t.id}
-                    track={t}
-                    variant="row"
-                    index={i}
-                    queueIds={matched.tracks.map((x) => x.id)}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {showAlbums && matched.albums.length > 0 && (
-            <section>
-              <h2 className="text-sm font-mono uppercase tracking-wide text-neutral-300 mb-3">
-                Albums ({matched.albums.length})
-              </h2>
-              <AlbumGrid albums={matched.albums} columns={4} />
-            </section>
-          )}
-
-          {showArtists && matched.artists.length > 0 && (
-            <section>
-              <h2 className="text-sm font-mono uppercase tracking-wide text-neutral-300 mb-3">
-                Artists ({matched.artists.length})
-              </h2>
-              <ArtistGrid artists={matched.artists} />
-            </section>
-          )}
-
-          {matched.tracks.length === 0 &&
-            matched.albums.length === 0 &&
-            matched.artists.length === 0 && (
-              <div className="text-neutral-500 text-sm">
-                No matches for <span className="text-white">"{q}"</span>.
-              </div>
-            )}
+      {q.trim() && !loading && tracks.length === 0 && (
+        <div className="text-neutral-500 text-sm">
+          No matches for <span className="text-white">"{q}"</span>.
         </div>
+      )}
+
+      {tracks.length > 0 && (
+        <section>
+          <h2 className="text-sm font-mono uppercase tracking-wide text-neutral-300 mb-3">
+            Songs ({tracks.length})
+          </h2>
+          <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-lg p-2">
+            {tracks.map((t, i) => (
+              <TrackCard key={t.id} track={t} variant="row" index={i} queueIds={queueIds} />
+            ))}
+          </div>
+        </section>
       )}
     </div>
   );
