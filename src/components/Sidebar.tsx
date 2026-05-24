@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import {
   Home,
   Search,
@@ -12,8 +12,11 @@ import {
   Settings as SettingsIcon,
   ChevronsLeft,
   ChevronsRight,
+  LogIn,
+  LogOut,
 } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "../context/AuthContext";
 
 type NavItem = {
   to: string;
@@ -36,6 +39,8 @@ const items: NavItem[] = [
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const width = collapsed ? "w-[68px]" : "w-[230px]";
 
   return (
@@ -90,11 +95,32 @@ export function Sidebar() {
         ))}
       </nav>
 
-      {!collapsed && (
-        <div className="px-4 py-3 border-t border-[#1a1a1a] text-[10px] text-neutral-500 font-mono uppercase tracking-wider">
-          v0.1.0 · alpha
-        </div>
-      )}
+      <div className="border-t border-[#1a1a1a] px-3 py-3">
+        {user ? (
+          <div className={`flex items-center gap-2 ${collapsed ? "justify-center" : ""}`}>
+            {!collapsed && (
+              <span className="flex-1 min-w-0 text-xs text-neutral-400 truncate font-mono">
+                {user.email}
+              </span>
+            )}
+            <button
+              onClick={() => void signOut()}
+              title="Sign out"
+              className="p-1.5 rounded hover:bg-[#1a1a1a] text-neutral-500 hover:text-neutral-200 transition-colors shrink-0"
+            >
+              <LogOut size={15} />
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => navigate("/auth")}
+            className={`flex items-center gap-2 w-full px-2 py-1.5 rounded text-xs text-neutral-400 hover:text-neutral-100 hover:bg-[#1a1a1a] transition-colors ${collapsed ? "justify-center" : ""}`}
+          >
+            <LogIn size={15} />
+            {!collapsed && <span>Sign in</span>}
+          </button>
+        )}
+      </div>
     </aside>
   );
 }
