@@ -38,8 +38,8 @@ Goal: ship a public PWA that lets a stranger browse free streaming catalogs, sig
 
 ### Local uploads
 
-- [ ] Drag-and-drop upload zone in Library, store blobs in IndexedDB (use `idb` lib) _(`feat(uploads):`)_
-- [ ] Parse tag metadata client-side with `music-metadata-browser`, persist to `uploads_metadata` table _(`feat(uploads):`)_
+- [x] Drag-and-drop upload zone in Library, store blobs in IndexedDB (use `idb` lib) _(`feat(uploads):`)_
+- [x] Parse tag metadata client-side with `music-metadata-browser`, persist to `uploads_metadata` table _(`feat(uploads):`)_
 
 ### Player
 
