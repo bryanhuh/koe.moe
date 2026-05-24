@@ -8,6 +8,7 @@ export type Track = {
   duration: number; // seconds
   coverUrl: string;
   audioUrl: string;
+  source?: "local" | "jamendo" | "audius";
 };
 
 export type Album = {
