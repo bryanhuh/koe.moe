@@ -43,9 +43,9 @@ Goal: ship a public PWA that lets a stranger browse free streaming catalogs, sig
 
 ### Player
 
-- [ ] Slide-up Now Playing view (tap bottom bar to expand) _(`feat(player):`)_
-- [ ] Media Session API integration (lock-screen art + controls + headphone buttons) _(`feat(player):`)_
-- [ ] Listening-history insert on track completion, capped at last 200 per user _(`feat(history):`)_
+- [x] Slide-up Now Playing view (tap bottom bar to expand) _(`feat(player):`)_
+- [x] Media Session API integration (lock-screen art + controls + headphone buttons) _(`feat(player):`)_
+- [x] Listening-history insert on track completion, capped at last 200 per user _(`feat(history):`)_
 
 ### Home / discovery
 
