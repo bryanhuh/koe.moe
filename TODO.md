@@ -49,7 +49,7 @@ Goal: ship a public PWA that lets a stranger browse free streaming catalogs, sig
 
 ### Home / discovery
 
-- [ ] `src/data/curated.ts` for editorial rows; render on Home for anon + signed-in _(`feat(home):`)_
+- [x] `src/data/curated.ts` for editorial rows; render on Home for anon + signed-in _(`feat(home):`)_
 
 ### Mobile
 
