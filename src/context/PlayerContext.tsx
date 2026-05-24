@@ -49,6 +49,7 @@ type PlayerState = {
   accent: string;
 
   // actions
+  resolveTrack: (id: string) => Track | null;
   registerTracks: (tracks: Track[]) => void;
   playTrack: (trackId: string, queueIds?: string[]) => void;
   playAlbum: (trackIds: string[], startId?: string) => void;
@@ -291,6 +292,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     [shuffle],
   );
 
+  const resolveTrack = useCallback(
+    (id: string): Track | null => trackCacheRef.current.get(id) ?? null,
+    [],
+  );
+
   const registerTracks = useCallback((tracks: Track[]) => {
     for (const t of tracks) trackCacheRef.current.set(t.id, t);
   }, []);
@@ -426,6 +432,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     logs,
     settings: settingsState,
     accent,
+    resolveTrack,
     registerTracks,
     playTrack,
     playAlbum,

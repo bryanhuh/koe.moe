@@ -1,20 +1,22 @@
 import {
-  Play,
+  ChevronDown,
+  ChevronUp,
+  Heart,
+  ListMusic,
+  Music,
   Pause,
-  SkipBack,
-  SkipForward,
-  Shuffle,
+  Play,
   Repeat,
   Repeat1,
-  Heart,
+  Shuffle,
+  SkipBack,
+  SkipForward,
+  Volume1,
   Volume2,
   VolumeX,
-  Volume1,
-  ListMusic,
-  Maximize2,
-  Minimize2,
+  X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { usePlayer } from "../context/PlayerContext";
 import { formatTime } from "../data/mockData";
 
@@ -41,128 +43,278 @@ export function Player() {
   } = usePlayer();
 
   const [showQueue, setShowQueue] = useState(false);
-  const [fullscreen, setFullscreen] = useState(false);
-
-  // Fullscreen toggle on root
-  useEffect(() => {
-    if (fullscreen) {
-      if (document.documentElement.requestFullscreen) {
-        document.documentElement.requestFullscreen().catch(() => {});
-      }
-    } else if (document.fullscreenElement) {
-      document.exitFullscreen().catch(() => {});
-    }
-    const onChange = () => {
-      if (!document.fullscreenElement) setFullscreen(false);
-    };
-    document.addEventListener("fullscreenchange", onChange);
-    return () => document.removeEventListener("fullscreenchange", onChange);
-  }, [fullscreen]);
+  const [nowPlayingOpen, setNowPlayingOpen] = useState(false);
 
   const pct = duration > 0 ? (progress / duration) * 100 : 0;
-
-  const VolumeIcon = muted || volume === 0 ? VolumeX : volume < 0.5 ? Volume1 : Volume2;
+  const VolumeIcon =
+    muted || volume === 0 ? VolumeX : volume < 0.5 ? Volume1 : Volume2;
 
   return (
-    <div className="h-[88px] bg-[#0b0b0b] border-t border-[#1a1a1a] grid grid-cols-[1fr_2fr_1fr] items-center px-4 gap-4 relative">
-      {/* Left: track info */}
-      <div className="flex items-center gap-3 min-w-0">
-        {currentTrack ? (
-          <>
+    <>
+      <NowPlayingView open={nowPlayingOpen} onClose={() => setNowPlayingOpen(false)} />
+
+      <div className="h-[88px] bg-[#0b0b0b] border-t border-[#1a1a1a] grid grid-cols-[1fr_2fr_1fr] items-center px-4 gap-4 relative z-10">
+        {/* Left: track info — click to expand Now Playing */}
+        <div className="flex items-center gap-3 min-w-0">
+          {currentTrack ? (
+            <>
+              <button
+                onClick={() => setNowPlayingOpen(true)}
+                className="flex items-center gap-3 min-w-0 flex-1 hover:opacity-75 transition-opacity text-left"
+                aria-label="Expand Now Playing"
+              >
+                {currentTrack.coverUrl ? (
+                  <img
+                    src={currentTrack.coverUrl}
+                    alt={currentTrack.album}
+                    className="w-14 h-14 rounded object-cover bg-[#1a1a1a] shrink-0"
+                  />
+                ) : (
+                  <div className="w-14 h-14 rounded bg-[#1a1a1a] flex items-center justify-center shrink-0">
+                    <Music size={20} className="text-neutral-600" />
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-medium text-white truncate">
+                    {currentTrack.title}
+                  </div>
+                  <div className="text-xs text-neutral-400 truncate">
+                    {currentTrack.artist}
+                  </div>
+                </div>
+                <ChevronUp size={13} className="text-neutral-600 shrink-0" />
+              </button>
+              <button
+                onClick={() => toggleFavorite(currentTrack.id)}
+                className={`ml-1 p-1.5 rounded hover:bg-[#1a1a1a] transition-colors shrink-0 ${
+                  isFavorite(currentTrack.id) ? "accent-text" : "text-neutral-400"
+                }`}
+                aria-label="Toggle favorite"
+              >
+                <Heart
+                  size={16}
+                  fill={isFavorite(currentTrack.id) ? "currentColor" : "none"}
+                />
+              </button>
+            </>
+          ) : (
+            <>
+              <div className="w-14 h-14 rounded bg-[#1a1a1a] shrink-0" />
+              <div className="text-xs text-neutral-500 font-mono">No track playing</div>
+            </>
+          )}
+        </div>
+
+        {/* Center: controls */}
+        <div className="flex flex-col items-center gap-2">
+          <div className="flex items-center gap-5">
+            <button
+              onClick={toggleShuffle}
+              className={`transition-colors ${
+                shuffle ? "accent-text" : "text-neutral-400 hover:text-white"
+              }`}
+              aria-label="Toggle shuffle"
+            >
+              <Shuffle size={16} />
+            </button>
+            <button
+              onClick={prev}
+              className="text-neutral-300 hover:text-white"
+              aria-label="Previous"
+            >
+              <SkipBack size={20} fill="currentColor" />
+            </button>
+            <button
+              onClick={togglePlay}
+              className="w-9 h-9 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 transition-transform"
+              aria-label={isPlaying ? "Pause" : "Play"}
+            >
+              {isPlaying ? (
+                <Pause size={18} fill="currentColor" />
+              ) : (
+                <Play size={18} fill="currentColor" className="translate-x-[1px]" />
+              )}
+            </button>
+            <button
+              onClick={next}
+              className="text-neutral-300 hover:text-white"
+              aria-label="Next"
+            >
+              <SkipForward size={20} fill="currentColor" />
+            </button>
+            <button
+              onClick={cycleRepeat}
+              className={`transition-colors ${
+                repeat !== "off" ? "accent-text" : "text-neutral-400 hover:text-white"
+              }`}
+              aria-label="Cycle repeat"
+            >
+              {repeat === "one" ? <Repeat1 size={16} /> : <Repeat size={16} />}
+            </button>
+          </div>
+
+          <div className="flex items-center gap-3 w-full max-w-[560px]">
+            <span className="text-[10px] font-mono text-neutral-500 w-9 text-right">
+              {formatTime(progress)}
+            </span>
+            <div className="flex-1 relative">
+              <div className="h-1 bg-[#2a2a2a] rounded-full overflow-hidden">
+                <div
+                  className="h-full accent-bg transition-[width] duration-100"
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={duration || 0}
+                step={0.1}
+                value={progress}
+                onChange={(e) => seek(Number(e.target.value))}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                aria-label="Seek"
+              />
+            </div>
+            <span className="text-[10px] font-mono text-neutral-500 w-9">
+              {formatTime(duration)}
+            </span>
+          </div>
+        </div>
+
+        {/* Right: volume + queue */}
+        <div className="flex items-center justify-end gap-3">
+          <button
+            onClick={() => setShowQueue((s) => !s)}
+            className={`p-1.5 rounded hover:bg-[#1a1a1a] transition-colors ${
+              showQueue ? "accent-text" : "text-neutral-400"
+            }`}
+            aria-label="Queue"
+          >
+            <ListMusic size={16} />
+          </button>
+          <button
+            onClick={toggleMute}
+            className="text-neutral-400 hover:text-white"
+            aria-label="Mute"
+          >
+            <VolumeIcon size={16} />
+          </button>
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.01}
+            value={muted ? 0 : volume}
+            onChange={(e) => setVolume(Number(e.target.value))}
+            className="koe-range w-24"
+            aria-label="Volume"
+          />
+        </div>
+
+        {showQueue && <QueuePopover onClose={() => setShowQueue(false)} />}
+      </div>
+    </>
+  );
+}
+
+// ─── Now Playing expanded view ───────────────────────────────────────────────
+
+function NowPlayingView({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const {
+    currentTrack,
+    isPlaying,
+    progress,
+    duration,
+    volume,
+    muted,
+    shuffle,
+    repeat,
+    togglePlay,
+    next,
+    prev,
+    seek,
+    setVolume,
+    toggleMute,
+    toggleShuffle,
+    cycleRepeat,
+    toggleFavorite,
+    isFavorite,
+  } = usePlayer();
+
+  const pct = duration > 0 ? (progress / duration) * 100 : 0;
+  const VolumeIcon =
+    muted || volume === 0 ? VolumeX : volume < 0.5 ? Volume1 : Volume2;
+
+  return (
+    <div
+      className={`fixed inset-0 z-50 bg-[#090909] flex flex-col transition-transform duration-300 ease-in-out ${
+        open ? "translate-y-0" : "translate-y-full pointer-events-none"
+      }`}
+      aria-hidden={!open}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between px-6 pt-6 pb-2 shrink-0">
+        <button
+          onClick={onClose}
+          className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#1a1a1a] text-neutral-400 hover:text-white transition-colors"
+          aria-label="Collapse"
+        >
+          <ChevronDown size={20} />
+        </button>
+        <span className="text-xs font-mono uppercase tracking-[0.2em] text-neutral-400">
+          Now Playing
+        </span>
+        <div className="w-9" />
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto flex flex-col px-8 py-4 max-w-[480px] mx-auto w-full">
+        {/* Cover */}
+        <div className="w-full aspect-square rounded-2xl overflow-hidden bg-[#1a1a1a] mb-8 shadow-2xl shrink-0">
+          {currentTrack?.coverUrl ? (
             <img
               src={currentTrack.coverUrl}
-              alt={currentTrack.album}
-              className="w-14 h-14 rounded object-cover bg-[#1a1a1a]"
+              alt=""
+              className="w-full h-full object-cover"
             />
-            <div className="min-w-0">
-              <div className="text-sm font-medium text-white truncate">
-                {currentTrack.title}
-              </div>
-              <div className="text-xs text-neutral-400 truncate">
-                {currentTrack.artist}
-              </div>
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <Music size={72} className="text-neutral-700" />
             </div>
+          )}
+        </div>
+
+        {/* Track info + favorite */}
+        <div className="flex items-start gap-4 mb-6 shrink-0">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-2xl font-bold text-white truncate">
+              {currentTrack?.title ?? "—"}
+            </h2>
+            <p className="text-sm text-neutral-400 mt-0.5 truncate">
+              {currentTrack?.artist ?? ""}
+            </p>
+          </div>
+          {currentTrack && (
             <button
               onClick={() => toggleFavorite(currentTrack.id)}
-              className={`ml-2 p-1.5 rounded hover:bg-[#1a1a1a] transition-colors ${
+              className={`mt-1 p-2 rounded-full hover:bg-[#1a1a1a] transition-colors ${
                 isFavorite(currentTrack.id) ? "accent-text" : "text-neutral-400"
               }`}
               aria-label="Toggle favorite"
             >
               <Heart
-                size={16}
+                size={22}
                 fill={isFavorite(currentTrack.id) ? "currentColor" : "none"}
               />
             </button>
-          </>
-        ) : (
-          <>
-            <div className="w-14 h-14 rounded bg-[#1a1a1a]" />
-            <div className="text-xs text-neutral-500 font-mono">No track playing</div>
-          </>
-        )}
-      </div>
-
-      {/* Center: controls */}
-      <div className="flex flex-col items-center gap-2">
-        <div className="flex items-center gap-5">
-          <button
-            onClick={toggleShuffle}
-            className={`transition-colors ${
-              shuffle ? "accent-text" : "text-neutral-400 hover:text-white"
-            }`}
-            aria-label="Toggle shuffle"
-            title="Shuffle"
-          >
-            <Shuffle size={16} />
-          </button>
-          <button
-            onClick={prev}
-            className="text-neutral-300 hover:text-white"
-            aria-label="Previous"
-          >
-            <SkipBack size={20} fill="currentColor" />
-          </button>
-          <button
-            onClick={togglePlay}
-            className="w-9 h-9 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 transition-transform"
-            aria-label={isPlaying ? "Pause" : "Play"}
-          >
-            {isPlaying ? (
-              <Pause size={18} fill="currentColor" />
-            ) : (
-              <Play size={18} fill="currentColor" className="translate-x-[1px]" />
-            )}
-          </button>
-          <button
-            onClick={next}
-            className="text-neutral-300 hover:text-white"
-            aria-label="Next"
-          >
-            <SkipForward size={20} fill="currentColor" />
-          </button>
-          <button
-            onClick={cycleRepeat}
-            className={`transition-colors ${
-              repeat !== "off" ? "accent-text" : "text-neutral-400 hover:text-white"
-            }`}
-            aria-label="Cycle repeat"
-            title={`Repeat: ${repeat}`}
-          >
-            {repeat === "one" ? <Repeat1 size={16} /> : <Repeat size={16} />}
-          </button>
+          )}
         </div>
 
-        <div className="flex items-center gap-3 w-full max-w-[560px]">
-          <span className="text-[10px] font-mono text-neutral-500 w-9 text-right">
-            {formatTime(progress)}
-          </span>
-          <div className="flex-1 group relative">
-            <div className="h-1 bg-[#2a2a2a] rounded-full overflow-hidden">
-              <div
-                className="h-full accent-bg transition-[width] duration-100"
-                style={{ width: `${pct}%` }}
-              />
+        {/* Seek bar */}
+        <div className="mb-6 shrink-0">
+          <div className="relative mb-2">
+            <div className="h-1.5 bg-[#2a2a2a] rounded-full overflow-hidden">
+              <div className="h-full accent-bg" style={{ width: `${pct}%` }} />
             </div>
             <input
               type="range"
@@ -175,55 +327,85 @@ export function Player() {
               aria-label="Seek"
             />
           </div>
-          <span className="text-[10px] font-mono text-neutral-500 w-9">
-            {formatTime(duration)}
-          </span>
+          <div className="flex justify-between text-[10px] font-mono text-neutral-500">
+            <span>{formatTime(progress)}</span>
+            <span>{formatTime(duration)}</span>
+          </div>
+        </div>
+
+        {/* Controls */}
+        <div className="flex items-center justify-between mb-8 shrink-0">
+          <button
+            onClick={toggleShuffle}
+            className={`p-2 transition-colors ${
+              shuffle ? "accent-text" : "text-neutral-400 hover:text-white"
+            }`}
+            aria-label="Shuffle"
+          >
+            <Shuffle size={22} />
+          </button>
+          <button
+            onClick={prev}
+            className="text-neutral-300 hover:text-white p-2"
+            aria-label="Previous"
+          >
+            <SkipBack size={30} fill="currentColor" />
+          </button>
+          <button
+            onClick={togglePlay}
+            className="w-16 h-16 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 transition-transform shadow-lg"
+            aria-label={isPlaying ? "Pause" : "Play"}
+          >
+            {isPlaying ? (
+              <Pause size={28} fill="currentColor" />
+            ) : (
+              <Play size={28} fill="currentColor" className="translate-x-0.5" />
+            )}
+          </button>
+          <button
+            onClick={next}
+            className="text-neutral-300 hover:text-white p-2"
+            aria-label="Next"
+          >
+            <SkipForward size={30} fill="currentColor" />
+          </button>
+          <button
+            onClick={cycleRepeat}
+            className={`p-2 transition-colors ${
+              repeat !== "off" ? "accent-text" : "text-neutral-400 hover:text-white"
+            }`}
+            aria-label="Repeat"
+          >
+            {repeat === "one" ? <Repeat1 size={22} /> : <Repeat size={22} />}
+          </button>
+        </div>
+
+        {/* Volume */}
+        <div className="flex items-center gap-3 shrink-0">
+          <button
+            onClick={toggleMute}
+            className="text-neutral-400 hover:text-white"
+            aria-label="Mute"
+          >
+            <VolumeIcon size={18} />
+          </button>
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.01}
+            value={muted ? 0 : volume}
+            onChange={(e) => setVolume(Number(e.target.value))}
+            className="koe-range flex-1"
+            aria-label="Volume"
+          />
         </div>
       </div>
-
-      {/* Right: volume + queue + fullscreen */}
-      <div className="flex items-center justify-end gap-3">
-        <button
-          onClick={() => setShowQueue((s) => !s)}
-          className={`p-1.5 rounded hover:bg-[#1a1a1a] transition-colors ${
-            showQueue ? "accent-text" : "text-neutral-400"
-          }`}
-          aria-label="Queue"
-          title="Queue"
-        >
-          <ListMusic size={16} />
-        </button>
-        <button
-          onClick={toggleMute}
-          className="text-neutral-400 hover:text-white"
-          aria-label="Mute"
-        >
-          <VolumeIcon size={16} />
-        </button>
-        <input
-          type="range"
-          min={0}
-          max={1}
-          step={0.01}
-          value={muted ? 0 : volume}
-          onChange={(e) => setVolume(Number(e.target.value))}
-          className="koe-range w-24"
-          aria-label="Volume"
-        />
-        <button
-          onClick={() => setFullscreen((f) => !f)}
-          className="p-1.5 rounded hover:bg-[#1a1a1a] text-neutral-400 hover:text-white transition-colors"
-          aria-label="Fullscreen"
-          title="Fullscreen"
-        >
-          {fullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-        </button>
-      </div>
-
-      {showQueue && <QueuePopover onClose={() => setShowQueue(false)} />}
     </div>
   );
 }
+
+// ─── Queue popover ────────────────────────────────────────────────────────────
 
 function QueuePopover({ onClose }: { onClose: () => void }) {
   const { queue, currentIndex, playTrack, removeFromQueue } = usePlayer();
@@ -233,10 +415,7 @@ function QueuePopover({ onClose }: { onClose: () => void }) {
         <h3 className="text-sm font-mono uppercase tracking-wide text-neutral-300">
           Queue · {queue.length}
         </h3>
-        <button
-          onClick={onClose}
-          className="text-xs text-neutral-500 hover:text-white"
-        >
+        <button onClick={onClose} className="text-xs text-neutral-500 hover:text-white">
           Close
         </button>
       </div>
@@ -259,9 +438,6 @@ function QueuePopover({ onClose }: { onClose: () => void }) {
   );
 }
 
-import { trackById } from "../data/mockData";
-import { X } from "lucide-react";
-
 function QueueRow({
   trackId,
   index,
@@ -275,7 +451,8 @@ function QueueRow({
   onPlay: () => void;
   onRemove: () => void;
 }) {
-  const t = trackById(trackId);
+  const { resolveTrack } = usePlayer();
+  const t = resolveTrack(trackId);
   if (!t) return null;
   return (
     <li
@@ -285,7 +462,13 @@ function QueueRow({
       onClick={onPlay}
     >
       <span className="text-[10px] font-mono text-neutral-500 w-5">{index + 1}</span>
-      <img src={t.coverUrl} className="w-9 h-9 rounded object-cover" alt="" />
+      {t.coverUrl ? (
+        <img src={t.coverUrl} className="w-9 h-9 rounded object-cover shrink-0" alt="" />
+      ) : (
+        <div className="w-9 h-9 rounded bg-[#1a1a1a] flex items-center justify-center shrink-0">
+          <Music size={14} className="text-neutral-600" />
+        </div>
+      )}
       <div className="min-w-0 flex-1">
         <div className={`text-sm truncate ${active ? "accent-text" : "text-white"}`}>
           {t.title}
