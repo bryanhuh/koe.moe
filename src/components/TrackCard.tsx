@@ -1,4 +1,4 @@
-import { Play, Heart, Pause } from "lucide-react";
+import { Play, Heart, Pause, Music } from "lucide-react";
 import { usePlayer } from "../context/PlayerContext";
 import { useAuth } from "../context/AuthContext";
 import type { Track } from "../data/mockData";
@@ -46,19 +46,25 @@ export function TrackCard({
   if (variant === "row") {
     return (
       <div
-        className={`group grid grid-cols-[24px_56px_1fr_1fr_auto_auto_24px] gap-4 items-center px-3 py-2 rounded-md hover:bg-[#161616] cursor-pointer ${
+        className={`group grid grid-cols-[40px_1fr_auto_24px] md:grid-cols-[24px_56px_1fr_1fr_auto_auto_24px] gap-2 md:gap-4 items-center px-3 py-2 rounded-md hover:bg-[#161616] cursor-pointer ${
           isCurrent ? "accent-soft-bg" : ""
         }`}
         onClick={handlePlay}
       >
-        <span className="text-[11px] font-mono text-neutral-500">
+        <span className="hidden md:block text-[11px] font-mono text-neutral-500">
           {(index ?? 0) + 1}
         </span>
-        <img
-          src={track.coverUrl}
-          alt=""
-          className="w-10 h-10 rounded object-cover"
-        />
+        {track.coverUrl ? (
+          <img
+            src={track.coverUrl}
+            alt=""
+            className="w-10 h-10 rounded object-cover"
+          />
+        ) : (
+          <div className="w-10 h-10 rounded bg-[#1a1a1a] flex items-center justify-center">
+            <Music size={14} className="text-neutral-600" />
+          </div>
+        )}
         <div className="min-w-0">
           <div
             className={`text-sm truncate ${isCurrent ? "accent-text" : "text-white"}`}
@@ -67,8 +73,8 @@ export function TrackCard({
           </div>
           <div className="text-xs text-neutral-400 truncate">{track.artist}</div>
         </div>
-        <div className="text-xs text-neutral-400 truncate">{track.album}</div>
-        <SourceBadge source={track.source} />
+        <div className="hidden md:block text-xs text-neutral-400 truncate">{track.album}</div>
+        <span className="hidden md:block"><SourceBadge source={track.source} /></span>
         <button
           onClick={(e) => {
             e.stopPropagation();
