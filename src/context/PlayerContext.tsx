@@ -10,6 +10,7 @@ import {
 import type { ReactNode } from "react";
 import { tracks as allTracks } from "../data/mockData";
 import type { Track } from "../data/mockData";
+import { supabase } from "../lib/supabase";
 
 export type RepeatMode = "off" | "all" | "one";
 
@@ -137,10 +138,17 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     new Map(allTracks.map((t) => [t.id, t])),
   );
 
+  const currentTrackRef = useRef<Track | null>(null);
+
   const currentTrack: Track | null =
     currentIndex >= 0 && currentIndex < queue.length
       ? (trackCacheRef.current.get(queue[currentIndex]) ?? null)
       : null;
+
+  // Keep currentTrackRef fresh for use inside stale-closure callbacks
+  useEffect(() => {
+    currentTrackRef.current = currentTrack;
+  }, [currentTrack]);
 
   // Persist
   useEffect(() => {
@@ -274,6 +282,49 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, [isPlaying]);
 
   const handleEnded = useCallback(() => {
+    // Persist listening history for signed-in users
+    const track = currentTrackRef.current;
+    if (track) {
+      void supabase.auth.getUser().then(({ data }) => {
+        if (!data.user) return;
+        const userId = data.user.id;
+        void supabase
+          .from("listening_history")
+          .insert({
+            user_id: userId,
+            source: track.source ?? "local",
+            external_id: track.id,
+            track_title: track.title,
+            track_artist: track.artist,
+            played_at: new Date().toISOString(),
+          })
+          .then(() => {
+            // Trim to last 200 rows
+            void supabase
+              .from("listening_history")
+              .select("id", { count: "exact", head: true })
+              .eq("user_id", userId)
+              .then(({ count }) => {
+                if (!count || count <= 200) return;
+                void supabase
+                  .from("listening_history")
+                  .select("id")
+                  .eq("user_id", userId)
+                  .order("played_at", { ascending: true })
+                  .limit(count - 200)
+                  .then(({ data: oldest }) => {
+                    if (oldest?.length) {
+                      void supabase
+                        .from("listening_history")
+                        .delete()
+                        .in("id", (oldest as { id: string }[]).map((r) => r.id));
+                    }
+                  });
+              });
+          });
+      });
+    }
+
     setProgress(0);
     if (repeat === "one") {
       const a = audioRef.current;
