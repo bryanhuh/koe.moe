@@ -14,6 +14,7 @@ import Logs from "./pages/Logs";
 import ThemeEditor from "./pages/ThemeEditor";
 import Settings from "./pages/Settings";
 import Auth from "./pages/Auth";
+import { SignupWallModal } from "./components/SignupWallModal";
 
 function App() {
   return (
@@ -50,6 +51,7 @@ function App() {
               }
             />
           </Routes>
+          <SignupWallModal />
         </PlayerProvider>
       </AuthProvider>
     </BrowserRouter>
