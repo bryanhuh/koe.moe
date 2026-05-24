@@ -25,7 +25,6 @@ export type Settings = {
   defaultShuffle: boolean;
   defaultRepeat: RepeatMode;
   defaultVolume: number;
-  crossfade: boolean;
 };
 
 type PlayerState = {
@@ -93,7 +92,6 @@ const defaultSettings: Settings = {
   defaultShuffle: false,
   defaultRepeat: "off",
   defaultVolume: 0.7,
-  crossfade: false,
 };
 
 const loadPersisted = (): Partial<Persisted> => {

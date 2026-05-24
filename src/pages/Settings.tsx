@@ -61,16 +61,6 @@ export default function Settings() {
           }
         />
 
-        <Row
-          label="Crossfade"
-          hint="Smooth blend between tracks (decorative)"
-          control={
-            <Toggle
-              checked={settings.crossfade}
-              onChange={(v) => updateSettings({ crossfade: v })}
-            />
-          }
-        />
       </div>
 
       <div className="mt-6 text-[10px] font-mono uppercase tracking-wider text-neutral-500">
