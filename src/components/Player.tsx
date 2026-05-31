@@ -272,6 +272,40 @@ function NowPlayingView({ open, onClose }: { open: boolean; onClose: () => void 
     if (Math.abs(v.currentTime - progress) > 0.4) v.currentTime = progress;
   }, [progress, videoUrl, open]);
 
+  // ── Auto-hiding controls + tap-to-play (video layout only) ─────────────────
+  const [controlsVisible, setControlsVisible] = useState(true);
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const revealControls = () => {
+    setControlsVisible(true);
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    if (isPlaying) {
+      hideTimerRef.current = setTimeout(() => setControlsVisible(false), 3000);
+    }
+  };
+
+  // Keep controls up while paused/closed; fade them out 3s after playback
+  // (re)starts. Pointer movement and taps re-reveal them.
+  useEffect(() => {
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    setControlsVisible(true);
+    if (!videoUrl || !open || !isPlaying) return;
+    hideTimerRef.current = setTimeout(() => setControlsVisible(false), 3000);
+    return () => {
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    };
+  }, [isPlaying, videoUrl, open]);
+
+  // Tap the video: reveal hidden controls, otherwise toggle play/pause.
+  const handleVideoTap = () => {
+    if (!controlsVisible) revealControls();
+    else togglePlay();
+  };
+
+  const fade = `transition-opacity duration-300 ${
+    controlsVisible ? "opacity-100" : "opacity-0 pointer-events-none"
+  }`;
+
   // Shared transport + seek + volume controls, rendered for both layouts.
   const transport = (
     <>
@@ -404,7 +438,10 @@ function NowPlayingView({ open, onClose }: { open: boolean; onClose: () => void 
     >
       {videoUrl ? (
         /* ── Immersive video layout (MV plays full-screen behind controls) ── */
-        <>
+        <div
+          className={`absolute inset-0 ${controlsVisible ? "" : "cursor-none"}`}
+          onPointerMove={revealControls}
+        >
           <video
             ref={videoRef}
             src={videoUrl}
@@ -413,13 +450,18 @@ function NowPlayingView({ open, onClose }: { open: boolean; onClose: () => void 
             playsInline
             preload="metadata"
             onLoadedMetadata={syncVideo}
-            className="absolute inset-0 w-full h-full object-cover bg-black"
+            onClick={handleVideoTap}
+            className="absolute inset-0 w-full h-full object-cover bg-black cursor-pointer"
           />
           {/* Gradient scrim: darkens top (header) and bottom (controls) */}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/10 to-black/95 pointer-events-none" />
+          <div
+            className={`absolute inset-0 bg-gradient-to-b from-black/70 via-black/10 to-black/95 pointer-events-none ${fade}`}
+          />
 
           {/* Header over the video */}
-          <div className="absolute top-0 inset-x-0 z-10 flex items-center justify-between px-6 pt-6">
+          <div
+            className={`absolute top-0 inset-x-0 z-10 flex items-center justify-between px-6 pt-6 ${fade}`}
+          >
             <button
               onClick={onClose}
               className="w-9 h-9 flex items-center justify-center rounded-full bg-black/30 hover:bg-black/50 text-white transition-colors"
@@ -436,13 +478,15 @@ function NowPlayingView({ open, onClose }: { open: boolean; onClose: () => void 
           </div>
 
           {/* Full-width controls anchored at the bottom */}
-          <div className="absolute inset-x-0 bottom-0 z-10 px-6 md:px-10 pb-10 pt-24">
+          <div
+            className={`absolute inset-x-0 bottom-0 z-10 px-6 md:px-10 pb-10 pt-24 ${fade}`}
+          >
             <div className="max-w-3xl mx-auto w-full">
               {titleRow}
               {transport}
             </div>
           </div>
-        </>
+        </div>
       ) : (
         /* ── Standard centered layout (cover art) ── */
         <>
