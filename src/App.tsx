@@ -14,6 +14,8 @@ import Favorites from "./pages/Favorites";
 import Logs from "./pages/Logs";
 import ThemeEditor from "./pages/ThemeEditor";
 import Settings from "./pages/Settings";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
 import Auth from "./pages/Auth";
 import { SignupWallModal } from "./components/SignupWallModal";
 
@@ -43,6 +45,8 @@ function App() {
                           <Route path="/logs" element={<Logs />} />
                           <Route path="/theme" element={<ThemeEditor />} />
                           <Route path="/settings" element={<Settings />} />
+                          <Route path="/privacy" element={<Privacy />} />
+                          <Route path="/terms" element={<Terms />} />
                         </Routes>
                       </div>
                     </main>
