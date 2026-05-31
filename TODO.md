@@ -62,7 +62,7 @@ Goal: ship a public PWA that lets a stranger browse free streaming catalogs, sig
 
 ### Legal / settings
 
-- [ ] `/privacy` and `/terms` static pages (plain-English drafts) _(`docs(legal):`)_
+- [x] `/privacy` and `/terms` static pages (plain-English drafts) _(`docs(legal):`)_
 - [ ] Settings → "Export my data" button: emits JSON of user's rows _(`feat(settings):`)_
 - [ ] Settings → "Delete my account" button: cascade-deletes user rows + auth user _(`feat(settings):`)_
 
