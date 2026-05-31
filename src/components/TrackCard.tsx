@@ -4,11 +4,32 @@ import { useAuth } from "../context/AuthContext";
 import type { Track } from "../data/mockData";
 import { formatTime } from "../data/mockData";
 
-function SourceBadge({ source }: { source: Track["source"] }) {
+const SOURCE_LABELS: Record<NonNullable<Track["source"]>, string> = {
+  local: "Local",
+  jamendo: "Jamendo",
+  audius: "Audius",
+  itunes: "iTunes",
+  animethemes: "Anime",
+};
+
+function SourceBadge({
+  source,
+  preview,
+}: {
+  source: Track["source"];
+  preview?: boolean;
+}) {
   if (!source || source === "local") return null;
   return (
-    <span className="inline-block text-[9px] font-mono uppercase tracking-widest px-1.5 py-0.5 rounded bg-[#1a1a1a] border border-[#222] text-neutral-500 shrink-0">
-      {source}
+    <span className="inline-flex items-center gap-1 shrink-0">
+      <span className="inline-block text-[9px] font-mono uppercase tracking-widest px-1.5 py-0.5 rounded bg-[#1a1a1a] border border-[#222] text-neutral-500">
+        {SOURCE_LABELS[source]}
+      </span>
+      {preview && (
+        <span className="inline-block text-[9px] font-mono uppercase tracking-widest px-1.5 py-0.5 rounded bg-[#1a1a1a] border border-[#222] text-amber-500/70">
+          30s
+        </span>
+      )}
     </span>
   );
 }
@@ -74,7 +95,7 @@ export function TrackCard({
           <div className="text-xs text-neutral-400 truncate">{track.artist}</div>
         </div>
         <div className="hidden md:block text-xs text-neutral-400 truncate">{track.album}</div>
-        <span className="hidden md:block"><SourceBadge source={track.source} /></span>
+        <span className="hidden md:block"><SourceBadge source={track.source} preview={track.preview} /></span>
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -122,7 +143,7 @@ export function TrackCard({
         {track.title}
       </div>
       <div className="text-xs text-neutral-400 truncate">{track.artist}</div>
-      <SourceBadge source={track.source} />
+      <SourceBadge source={track.source} preview={track.preview} />
     </div>
   );
 }
