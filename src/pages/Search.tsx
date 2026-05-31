@@ -1,10 +1,37 @@
 import { useEffect, useRef, useState } from "react";
-import { Loader2, Search as SearchIcon } from "lucide-react";
+import { Loader2, Search as SearchIcon, SearchX } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { TrackCard } from "../components/TrackCard";
 import { searchAllSources } from "../lib/sources/registry";
 import { usePlayer } from "../context/PlayerContext";
 import type { Track } from "../data/mockData";
+
+const SUGGESTIONS = [
+  "Blinding Lights",
+  "Unravel",
+  "lofi",
+  "Jujutsu Kaisen",
+  "The Weeknd",
+];
+
+function SkeletonRows() {
+  return (
+    <section>
+      <div className="h-4 w-24 bg-[#1a1a1a] rounded animate-pulse mb-3" />
+      <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-lg p-2">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-3 px-3 py-2">
+            <div className="w-10 h-10 rounded bg-[#1a1a1a] animate-pulse shrink-0" />
+            <div className="flex-1 space-y-1.5">
+              <div className="h-3 w-1/3 bg-[#1a1a1a] rounded animate-pulse" />
+              <div className="h-2.5 w-1/4 bg-[#161616] rounded animate-pulse" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 function scoreTrack(t: Track, term: string): number {
   const title = t.title.toLowerCase();
@@ -77,14 +104,39 @@ export default function Search() {
       </div>
 
       {!q.trim() && (
-        <div className="text-neutral-500 text-sm">
-          Type something to start searching.
+        <div className="flex flex-col items-center justify-center text-center py-20">
+          <SearchIcon size={30} className="text-neutral-700 mb-4" />
+          <p className="text-sm text-neutral-300">
+            Search across iTunes and AnimeThemes
+          </p>
+          <p className="text-xs text-neutral-600 mt-1 mb-6">
+            Mainstream songs and full-length anime openings
+          </p>
+          <div className="flex flex-wrap gap-2 justify-center max-w-md">
+            {SUGGESTIONS.map((s) => (
+              <button
+                key={s}
+                onClick={() => setQ(s)}
+                className="text-xs px-3 py-1.5 rounded-full bg-[#161616] border border-[#222] text-neutral-300 hover:bg-[#1f1f1f] hover:text-white transition-colors"
+              >
+                {s}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
+      {q.trim() && loading && tracks.length === 0 && <SkeletonRows />}
+
       {q.trim() && !loading && tracks.length === 0 && (
-        <div className="text-neutral-500 text-sm">
-          No matches for <span className="text-white">"{q}"</span>.
+        <div className="flex flex-col items-center justify-center text-center py-20">
+          <SearchX size={30} className="text-neutral-700 mb-4" />
+          <p className="text-sm text-neutral-300">
+            No matches for <span className="text-white">"{q}"</span>
+          </p>
+          <p className="text-xs text-neutral-600 mt-1">
+            Try a different title, artist, or anime.
+          </p>
         </div>
       )}
 
