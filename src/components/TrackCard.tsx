@@ -118,7 +118,7 @@ export function TrackCard({
           <Heart size={14} fill={isFavorite(track.id) ? "currentColor" : "none"} />
         </button>
         <span className="text-[11px] font-mono text-neutral-500">
-          {formatTime(track.duration)}
+          {track.duration ? formatTime(track.duration) : "—"}
         </span>
       </div>
     );
