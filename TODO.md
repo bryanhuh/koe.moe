@@ -68,8 +68,8 @@ Goal: ship a public PWA that lets a stranger browse free streaming catalogs, sig
 
 ### Tests
 
-- [ ] Install Playwright, add `tests/critical.spec.ts`: signup → search → play → favorite → create playlist _(`test(e2e):`)_
-- [ ] GitHub Actions workflow runs E2E on PR _(`ci(e2e):`)_
+- [x] Install Playwright, add `tests/critical.spec.ts`: signup → search → play → favorite → create playlist _(`test(e2e):`)_
+- [x] GitHub Actions workflow runs E2E on PR _(`ci(e2e):`)_
 
 ### Deploy
 
