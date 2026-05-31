@@ -272,180 +272,213 @@ function NowPlayingView({ open, onClose }: { open: boolean; onClose: () => void 
     if (Math.abs(v.currentTime - progress) > 0.4) v.currentTime = progress;
   }, [progress, videoUrl, open]);
 
-  return (
-    <div
-      className={`fixed inset-0 z-50 bg-[#090909] flex flex-col transition-transform duration-300 ease-in-out ${
-        open ? "translate-y-0" : "translate-y-full pointer-events-none"
-      }`}
-      aria-hidden={!open}
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between px-6 pt-6 pb-2 shrink-0">
-        <button
-          onClick={onClose}
-          className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#1a1a1a] text-neutral-400 hover:text-white transition-colors"
-          aria-label="Collapse"
-        >
-          <ChevronDown size={20} />
-        </button>
-        <span className="text-xs font-mono uppercase tracking-[0.2em] text-neutral-400">
-          Now Playing
-        </span>
-        <div className="w-9" />
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto flex flex-col px-8 py-4 max-w-[480px] mx-auto w-full">
-        {/* Cover — or the music video for AnimeThemes tracks */}
-        {videoUrl ? (
-          <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black mb-8 shadow-2xl shrink-0">
-            <video
-              ref={videoRef}
-              src={videoUrl}
-              poster={currentTrack?.coverUrl || undefined}
-              muted
-              playsInline
-              preload="metadata"
-              onLoadedMetadata={syncVideo}
-              className="w-full h-full object-contain bg-black"
-            />
-            <span className="absolute top-2 right-2 text-[9px] font-mono uppercase tracking-widest px-1.5 py-0.5 rounded bg-black/60 border border-white/15 text-white/80">
-              MV
-            </span>
+  // Shared transport + seek + volume controls, rendered for both layouts.
+  const transport = (
+    <>
+      {/* Seek bar */}
+      <div className="mb-5">
+        <div className="relative mb-2">
+          <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
+            <div className="h-full accent-bg" style={{ width: `${pct}%` }} />
           </div>
-        ) : (
-          <div className="w-full aspect-square rounded-2xl overflow-hidden bg-[#1a1a1a] mb-8 shadow-2xl shrink-0">
-            {currentTrack?.coverUrl ? (
-              <img
-                src={currentTrack.coverUrl}
-                alt=""
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <Music size={72} className="text-neutral-700" />
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Track info + favorite */}
-        <div className="flex items-start gap-4 mb-6 shrink-0">
-          <div className="flex-1 min-w-0">
-            <h2 className="text-2xl font-bold text-white truncate">
-              {currentTrack?.title ?? "—"}
-            </h2>
-            <p className="text-sm text-neutral-400 mt-0.5 truncate">
-              {currentTrack?.artist ?? ""}
-            </p>
-          </div>
-          {currentTrack && (
-            <button
-              onClick={() => toggleFavorite(currentTrack.id)}
-              className={`mt-1 p-2 rounded-full hover:bg-[#1a1a1a] transition-colors ${
-                isFavorite(currentTrack.id) ? "accent-text" : "text-neutral-400"
-              }`}
-              aria-label="Toggle favorite"
-            >
-              <Heart
-                size={22}
-                fill={isFavorite(currentTrack.id) ? "currentColor" : "none"}
-              />
-            </button>
-          )}
-        </div>
-
-        {/* Seek bar */}
-        <div className="mb-6 shrink-0">
-          <div className="relative mb-2">
-            <div className="h-1.5 bg-[#2a2a2a] rounded-full overflow-hidden">
-              <div className="h-full accent-bg" style={{ width: `${pct}%` }} />
-            </div>
-            <input
-              type="range"
-              min={0}
-              max={duration || 0}
-              step={0.1}
-              value={progress}
-              onChange={(e) => seek(Number(e.target.value))}
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-              aria-label="Seek"
-            />
-          </div>
-          <div className="flex justify-between text-[10px] font-mono text-neutral-500">
-            <span>{formatTime(progress)}</span>
-            <span>{formatTime(duration)}</span>
-          </div>
-        </div>
-
-        {/* Controls */}
-        <div className="flex items-center justify-between mb-8 shrink-0">
-          <button
-            onClick={toggleShuffle}
-            className={`p-2 transition-colors ${
-              shuffle ? "accent-text" : "text-neutral-400 hover:text-white"
-            }`}
-            aria-label="Shuffle"
-          >
-            <Shuffle size={22} />
-          </button>
-          <button
-            onClick={prev}
-            className="text-neutral-300 hover:text-white p-2"
-            aria-label="Previous"
-          >
-            <SkipBack size={30} fill="currentColor" />
-          </button>
-          <button
-            onClick={togglePlay}
-            className="w-16 h-16 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 transition-transform shadow-lg"
-            aria-label={isPlaying ? "Pause" : "Play"}
-          >
-            {isPlaying ? (
-              <Pause size={28} fill="currentColor" />
-            ) : (
-              <Play size={28} fill="currentColor" className="translate-x-0.5" />
-            )}
-          </button>
-          <button
-            onClick={next}
-            className="text-neutral-300 hover:text-white p-2"
-            aria-label="Next"
-          >
-            <SkipForward size={30} fill="currentColor" />
-          </button>
-          <button
-            onClick={cycleRepeat}
-            className={`p-2 transition-colors ${
-              repeat !== "off" ? "accent-text" : "text-neutral-400 hover:text-white"
-            }`}
-            aria-label="Repeat"
-          >
-            {repeat === "one" ? <Repeat1 size={22} /> : <Repeat size={22} />}
-          </button>
-        </div>
-
-        {/* Volume */}
-        <div className="flex items-center gap-3 shrink-0">
-          <button
-            onClick={toggleMute}
-            className="text-neutral-400 hover:text-white"
-            aria-label="Mute"
-          >
-            <VolumeIcon size={18} />
-          </button>
           <input
             type="range"
             min={0}
-            max={1}
-            step={0.01}
-            value={muted ? 0 : volume}
-            onChange={(e) => setVolume(Number(e.target.value))}
-            className="koe-range flex-1"
-            aria-label="Volume"
+            max={duration || 0}
+            step={0.1}
+            value={progress}
+            onChange={(e) => seek(Number(e.target.value))}
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            aria-label="Seek"
           />
         </div>
+        <div className="flex justify-between text-[10px] font-mono text-neutral-300">
+          <span>{formatTime(progress)}</span>
+          <span>{formatTime(duration)}</span>
+        </div>
       </div>
+
+      {/* Controls */}
+      <div className="flex items-center justify-between mb-6">
+        <button
+          onClick={toggleShuffle}
+          className={`p-2 transition-colors ${
+            shuffle ? "accent-text" : "text-neutral-300 hover:text-white"
+          }`}
+          aria-label="Shuffle"
+        >
+          <Shuffle size={22} />
+        </button>
+        <button
+          onClick={prev}
+          className="text-neutral-200 hover:text-white p-2"
+          aria-label="Previous"
+        >
+          <SkipBack size={30} fill="currentColor" />
+        </button>
+        <button
+          onClick={togglePlay}
+          className="w-16 h-16 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 transition-transform shadow-lg"
+          aria-label={isPlaying ? "Pause" : "Play"}
+        >
+          {isPlaying ? (
+            <Pause size={28} fill="currentColor" />
+          ) : (
+            <Play size={28} fill="currentColor" className="translate-x-0.5" />
+          )}
+        </button>
+        <button
+          onClick={next}
+          className="text-neutral-200 hover:text-white p-2"
+          aria-label="Next"
+        >
+          <SkipForward size={30} fill="currentColor" />
+        </button>
+        <button
+          onClick={cycleRepeat}
+          className={`p-2 transition-colors ${
+            repeat !== "off" ? "accent-text" : "text-neutral-300 hover:text-white"
+          }`}
+          aria-label="Repeat"
+        >
+          {repeat === "one" ? <Repeat1 size={22} /> : <Repeat size={22} />}
+        </button>
+      </div>
+
+      {/* Volume */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={toggleMute}
+          className="text-neutral-300 hover:text-white"
+          aria-label="Mute"
+        >
+          <VolumeIcon size={18} />
+        </button>
+        <input
+          type="range"
+          min={0}
+          max={1}
+          step={0.01}
+          value={muted ? 0 : volume}
+          onChange={(e) => setVolume(Number(e.target.value))}
+          className="koe-range flex-1"
+          aria-label="Volume"
+        />
+      </div>
+    </>
+  );
+
+  const titleRow = (
+    <div className="flex items-end gap-4 mb-5">
+      <div className="flex-1 min-w-0">
+        <h2 className="text-2xl font-bold text-white truncate drop-shadow">
+          {currentTrack?.title ?? "—"}
+        </h2>
+        <p className="text-sm text-neutral-300 mt-0.5 truncate drop-shadow">
+          {currentTrack?.artist ?? ""}
+        </p>
+      </div>
+      {currentTrack && (
+        <button
+          onClick={() => toggleFavorite(currentTrack.id)}
+          className={`p-2 rounded-full hover:bg-white/10 transition-colors ${
+            isFavorite(currentTrack.id) ? "accent-text" : "text-neutral-200"
+          }`}
+          aria-label="Toggle favorite"
+        >
+          <Heart
+            size={22}
+            fill={isFavorite(currentTrack.id) ? "currentColor" : "none"}
+          />
+        </button>
+      )}
+    </div>
+  );
+
+  return (
+    <div
+      className={`fixed inset-0 z-50 bg-[#090909] transition-transform duration-300 ease-in-out ${
+        open ? "translate-y-0" : "translate-y-full pointer-events-none"
+      } ${videoUrl ? "" : "flex flex-col"}`}
+      aria-hidden={!open}
+    >
+      {videoUrl ? (
+        /* ── Immersive video layout (MV plays full-screen behind controls) ── */
+        <>
+          <video
+            ref={videoRef}
+            src={videoUrl}
+            poster={currentTrack?.coverUrl || undefined}
+            muted
+            playsInline
+            preload="metadata"
+            onLoadedMetadata={syncVideo}
+            className="absolute inset-0 w-full h-full object-cover bg-black"
+          />
+          {/* Gradient scrim: darkens top (header) and bottom (controls) */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/10 to-black/95 pointer-events-none" />
+
+          {/* Header over the video */}
+          <div className="absolute top-0 inset-x-0 z-10 flex items-center justify-between px-6 pt-6">
+            <button
+              onClick={onClose}
+              className="w-9 h-9 flex items-center justify-center rounded-full bg-black/30 hover:bg-black/50 text-white transition-colors"
+              aria-label="Collapse"
+            >
+              <ChevronDown size={20} />
+            </button>
+            <span className="text-xs font-mono uppercase tracking-[0.2em] text-white/80">
+              Now Playing
+            </span>
+            <span className="inline-flex items-center text-[9px] font-mono uppercase tracking-widest px-1.5 py-0.5 rounded bg-black/40 border border-white/15 text-white/80">
+              MV
+            </span>
+          </div>
+
+          {/* Full-width controls anchored at the bottom */}
+          <div className="absolute inset-x-0 bottom-0 z-10 px-6 md:px-10 pb-10 pt-24">
+            <div className="max-w-3xl mx-auto w-full">
+              {titleRow}
+              {transport}
+            </div>
+          </div>
+        </>
+      ) : (
+        /* ── Standard centered layout (cover art) ── */
+        <>
+          <div className="flex items-center justify-between px-6 pt-6 pb-2 shrink-0">
+            <button
+              onClick={onClose}
+              className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#1a1a1a] text-neutral-400 hover:text-white transition-colors"
+              aria-label="Collapse"
+            >
+              <ChevronDown size={20} />
+            </button>
+            <span className="text-xs font-mono uppercase tracking-[0.2em] text-neutral-400">
+              Now Playing
+            </span>
+            <div className="w-9" />
+          </div>
+
+          <div className="flex-1 overflow-y-auto flex flex-col px-8 py-4 max-w-[480px] mx-auto w-full">
+            <div className="w-full aspect-square rounded-2xl overflow-hidden bg-[#1a1a1a] mb-8 shadow-2xl shrink-0">
+              {currentTrack?.coverUrl ? (
+                <img
+                  src={currentTrack.coverUrl}
+                  alt=""
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <Music size={72} className="text-neutral-700" />
+                </div>
+              )}
+            </div>
+            {titleRow}
+            {transport}
+          </div>
+        </>
+      )}
     </div>
   );
 }
