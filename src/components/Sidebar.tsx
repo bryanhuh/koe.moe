@@ -120,6 +120,18 @@ export function Sidebar() {
             {!collapsed && <span>Sign in</span>}
           </button>
         )}
+
+        {!collapsed && (
+          <div className="mt-3 flex items-center gap-2 px-2 text-[10px] font-mono uppercase tracking-wider text-neutral-600">
+            <NavLink to="/privacy" className="hover:text-neutral-400 transition-colors">
+              Privacy
+            </NavLink>
+            <span aria-hidden>·</span>
+            <NavLink to="/terms" className="hover:text-neutral-400 transition-colors">
+              Terms
+            </NavLink>
+          </div>
+        )}
       </div>
     </aside>
   );
