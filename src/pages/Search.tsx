@@ -2,8 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Loader2, Search as SearchIcon } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { TrackCard } from "../components/TrackCard";
-import { jamendo } from "../lib/sources/jamendo";
-import { audius } from "../lib/sources/audius";
+import { searchAllSources } from "../lib/sources/registry";
 import { usePlayer } from "../context/PlayerContext";
 import type { Track } from "../data/mockData";
 
@@ -36,15 +35,7 @@ export default function Search() {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     debounceRef.current = setTimeout(async () => {
-      const [jRes, aRes] = await Promise.allSettled([
-        jamendo.search(term, 10),
-        audius.search(term, 10),
-      ]);
-
-      const merged: Track[] = [
-        ...(jRes.status === "fulfilled" ? jRes.value : []),
-        ...(aRes.status === "fulfilled" ? aRes.value : []),
-      ];
+      const merged: Track[] = await searchAllSources(term, 10);
 
       const termLower = term.toLowerCase();
       merged.sort((a, b) => scoreTrack(b, termLower) - scoreTrack(a, termLower));
