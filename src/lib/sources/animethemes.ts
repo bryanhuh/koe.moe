@@ -12,7 +12,7 @@ const INCLUDE =
 type Image = { facet?: string; link?: string };
 type Artist = { name: string };
 type Audio = { id: number; link?: string };
-type Video = { audio?: Audio };
+type Video = { link?: string; resolution?: number; audio?: Audio };
 type Entry = { videos?: Video[] };
 type AnimeTheme = {
   id: number;
@@ -28,17 +28,21 @@ function pickCover(images: Image[] | undefined): string {
   return (large ?? images[0]).link ?? "";
 }
 
-function pickAudio(theme: AnimeTheme): string {
+// Pick a single video that carries both an audio track and a video file, so the
+// .ogg audio and .webm MV come from the same encode and line up when synced.
+function pickMedia(theme: AnimeTheme): { audioUrl: string; videoUrl: string } {
   for (const entry of theme.animethemeentries ?? []) {
     for (const video of entry.videos ?? []) {
-      if (video.audio?.link) return video.audio.link;
+      if (video.audio?.link) {
+        return { audioUrl: video.audio.link, videoUrl: video.link ?? "" };
+      }
     }
   }
-  return "";
+  return { audioUrl: "", videoUrl: "" };
 }
 
 function toTrack(theme: AnimeTheme): Track | null {
-  const audioUrl = pickAudio(theme);
+  const { audioUrl, videoUrl } = pickMedia(theme);
   const title = theme.song?.title;
   if (!audioUrl || !title) return null;
 
@@ -56,6 +60,7 @@ function toTrack(theme: AnimeTheme): Track | null {
     duration: 0, // not provided; player reads it from audio metadata
     coverUrl: pickCover(theme.anime?.images),
     audioUrl,
+    videoUrl: videoUrl || undefined,
     source: "animethemes",
   };
 }

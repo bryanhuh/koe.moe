@@ -11,6 +11,8 @@ export type Track = {
   source?: "local" | "itunes" | "animethemes";
   // True for sources that only stream a short clip (e.g. iTunes 30s previews).
   preview?: boolean;
+  // Optional music video (e.g. AnimeThemes serves the OP/ED as a .webm).
+  videoUrl?: string;
 };
 
 export type Album = {
