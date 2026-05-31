@@ -67,6 +67,24 @@ export async function mockSources(page: Page): Promise<void> {
       body: JSON.stringify({ data: [] }),
     }),
   );
+
+  // iTunes Search → empty (Jamendo supplies the asserted track).
+  await page.route(/itunes\.apple\.com\//, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ resultCount: 0, results: [] }),
+    }),
+  );
+
+  // AnimeThemes → empty.
+  await page.route(/api\.animethemes\.moe\//, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ animethemes: [] }),
+    }),
+  );
 }
 
 /** Stop any Supabase auth/REST traffic from hitting the network in tests. */
