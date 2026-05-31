@@ -1,0 +1,20 @@
+{
+  "name": "Koe — music player",
+  "short_name": "Koe",
+  "description": "Browse free streaming catalogs, favorite tracks, and build playlists.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
+  "categories": ["music", "entertainment"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any"
+    }
+  ]
+}
