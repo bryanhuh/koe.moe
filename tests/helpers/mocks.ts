@@ -14,70 +14,41 @@ export const FAKE_USER = {
   created_at: "2026-01-01T00:00:00.000Z",
 };
 
-/** One canned Jamendo track the search mock returns. */
+/** The single canned track the search mocks return (an iTunes result). */
 export const MOCK_TRACK = {
-  id: "999",
-  name: "Midnight Circuit",
-  duration: 180,
-  artist_id: "42",
-  artist_name: "Neon Foxes",
-  album_id: "7",
-  album_name: "Voltage",
-  image: "https://example.test/cover.jpg",
-  audio: "https://example.test/audio.mp3",
+  trackId: 999,
+  title: "Midnight Circuit",
+  artist: "Neon Foxes",
 };
 
 /**
  * Intercept every external catalog call so search is hermetic:
- *   - Jamendo /tracks/ → one canned result
- *   - Audius host discovery + search → empty (Jamendo supplies the track)
+ *   - iTunes Search → one canned result
+ *   - AnimeThemes → empty (iTunes supplies the asserted track)
  */
 export async function mockSources(page: Page): Promise<void> {
-  await page.route(/api\.jamendo\.com\/.*\/tracks\//, (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        headers: { status: "success", results_count: 1 },
-        results: [MOCK_TRACK],
-      }),
-    }),
-  );
-
-  // Audius host discovery (root) → point back at itself so the search URL is
-  // also caught by the route below.
-  await page.route("https://api.audius.co/", (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ data: ["https://api.audius.co"] }),
-    }),
-  );
-  await page.route("https://api.audius.co", (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ data: ["https://api.audius.co"] }),
-    }),
-  );
-  await page.route(/\/v1\/tracks\/search/, (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ data: [] }),
-    }),
-  );
-
-  // iTunes Search → empty (Jamendo supplies the asserted track).
   await page.route(/itunes\.apple\.com\//, (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ resultCount: 0, results: [] }),
+      body: JSON.stringify({
+        resultCount: 1,
+        results: [
+          {
+            trackId: MOCK_TRACK.trackId,
+            trackName: MOCK_TRACK.title,
+            artistName: MOCK_TRACK.artist,
+            artistId: 42,
+            collectionName: "Voltage",
+            collectionId: 7,
+            artworkUrl100: "https://example.test/100x100bb.jpg",
+            previewUrl: "https://example.test/preview.m4a",
+          },
+        ],
+      }),
     }),
   );
 
-  // AnimeThemes → empty.
   await page.route(/api\.animethemes\.moe\//, (route) =>
     route.fulfill({
       status: 200,

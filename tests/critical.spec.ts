@@ -34,7 +34,7 @@ test.describe("critical path", () => {
     await page.goto("/search");
     await page.getByPlaceholder(/Search songs/).fill("midnight");
 
-    const trackRow = page.getByText(MOCK_TRACK.name).first();
+    const trackRow = page.getByText(MOCK_TRACK.title).first();
     await expect(trackRow).toBeVisible();
 
     // ── Play ────────────────────────────────────────────────────────────────
@@ -43,7 +43,7 @@ test.describe("critical path", () => {
     const playerBar = page.locator("div").filter({ hasText: "No track playing" });
     await expect(playerBar).toHaveCount(0);
     await expect(
-      page.getByText(MOCK_TRACK.name, { exact: true }).last(),
+      page.getByText(MOCK_TRACK.title, { exact: true }).last(),
     ).toBeVisible();
 
     // ── Favorite ────────────────────────────────────────────────────────────
