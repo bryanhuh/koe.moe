@@ -2,19 +2,14 @@ import type { Track } from "../../data/mockData";
 import type { Source, SourceId } from "./index";
 import { itunes } from "./itunes";
 import { animethemes } from "./animethemes";
-import { audius } from "./audius";
-import { jamendo } from "./jamendo";
 
 // Every active catalog source. Order here is the tie-break order when relevance
-// scores are equal. iTunes (mainstream) and AnimeThemes (anime) lead; Audius and
-// Jamendo add free full-length tracks. Jamendo stays dormant without a key.
-export const sources: Source[] = [itunes, animethemes, audius, jamendo];
+// scores are equal: iTunes (mainstream, 30s previews) then AnimeThemes (anime).
+export const sources: Source[] = [itunes, animethemes];
 
 export const sourceById: Record<SourceId, Source> = {
   itunes,
   animethemes,
-  audius,
-  jamendo,
 };
 
 /**

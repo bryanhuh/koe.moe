@@ -8,7 +8,7 @@ export type Track = {
   duration: number; // seconds
   coverUrl: string;
   audioUrl: string;
-  source?: "local" | "jamendo" | "audius" | "itunes" | "animethemes";
+  source?: "local" | "itunes" | "animethemes";
   // True for sources that only stream a short clip (e.g. iTunes 30s previews).
   preview?: boolean;
 };
@@ -42,8 +42,8 @@ export type Playlist = {
 const cover = (seed: string, size = 600) =>
   `https://picsum.photos/seed/koe-${seed}/${size}/${size}`;
 
-// Real stream URLs will come from the Jamendo/Audius source abstraction (catalog milestone).
-// Until then every track returns an empty string so the audio element loads nothing.
+// These mock tracks carry no real audio; live tracks come from the iTunes /
+// AnimeThemes sources. Every mock track returns an empty string here.
 const audio = (_i: number) => "";
 
 export const artists: Artist[] = [

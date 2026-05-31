@@ -6,8 +6,6 @@ import { formatTime } from "../data/mockData";
 
 const SOURCE_LABELS: Record<NonNullable<Track["source"]>, string> = {
   local: "Local",
-  jamendo: "Jamendo",
-  audius: "Audius",
   itunes: "iTunes",
   animethemes: "Anime",
 };

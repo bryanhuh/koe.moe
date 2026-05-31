@@ -1,10 +1,6 @@
 import type { Track } from "../../data/mockData";
 
-export type SourceId =
-  | "jamendo"
-  | "audius"
-  | "itunes"
-  | "animethemes";
+export type SourceId = "itunes" | "animethemes";
 
 export interface Source {
   readonly sourceId: SourceId;
