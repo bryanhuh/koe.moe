@@ -16,7 +16,7 @@ import {
   VolumeX,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePlayer } from "../context/PlayerContext";
 import { formatTime } from "../data/mockData";
 
@@ -245,6 +245,33 @@ function NowPlayingView({ open, onClose }: { open: boolean; onClose: () => void 
   const VolumeIcon =
     muted || volume === 0 ? VolumeX : volume < 0.5 ? Volume1 : Volume2;
 
+  // ── Music video (AnimeThemes) ──────────────────────────────────────────────
+  // The audio engine stays the single source of truth. The MV is a muted
+  // <video> mirrored to the audio's play state and position so it never
+  // double-plays sound and stays roughly in sync (incl. after seeks).
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const videoUrl = currentTrack?.videoUrl;
+
+  const syncVideo = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (Math.abs(v.currentTime - progress) > 0.4) v.currentTime = progress;
+    if (open && isPlaying) void v.play().catch(() => {});
+  };
+
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v || !videoUrl) return;
+    if (open && isPlaying) void v.play().catch(() => {});
+    else v.pause();
+  }, [open, isPlaying, videoUrl, currentTrack?.id]);
+
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v || !videoUrl || !open) return;
+    if (Math.abs(v.currentTime - progress) > 0.4) v.currentTime = progress;
+  }, [progress, videoUrl, open]);
+
   return (
     <div
       className={`fixed inset-0 z-50 bg-[#090909] flex flex-col transition-transform duration-300 ease-in-out ${
@@ -269,20 +296,38 @@ function NowPlayingView({ open, onClose }: { open: boolean; onClose: () => void 
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto flex flex-col px-8 py-4 max-w-[480px] mx-auto w-full">
-        {/* Cover */}
-        <div className="w-full aspect-square rounded-2xl overflow-hidden bg-[#1a1a1a] mb-8 shadow-2xl shrink-0">
-          {currentTrack?.coverUrl ? (
-            <img
-              src={currentTrack.coverUrl}
-              alt=""
-              className="w-full h-full object-cover"
+        {/* Cover — or the music video for AnimeThemes tracks */}
+        {videoUrl ? (
+          <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black mb-8 shadow-2xl shrink-0">
+            <video
+              ref={videoRef}
+              src={videoUrl}
+              poster={currentTrack?.coverUrl || undefined}
+              muted
+              playsInline
+              preload="metadata"
+              onLoadedMetadata={syncVideo}
+              className="w-full h-full object-contain bg-black"
             />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <Music size={72} className="text-neutral-700" />
-            </div>
-          )}
-        </div>
+            <span className="absolute top-2 right-2 text-[9px] font-mono uppercase tracking-widest px-1.5 py-0.5 rounded bg-black/60 border border-white/15 text-white/80">
+              MV
+            </span>
+          </div>
+        ) : (
+          <div className="w-full aspect-square rounded-2xl overflow-hidden bg-[#1a1a1a] mb-8 shadow-2xl shrink-0">
+            {currentTrack?.coverUrl ? (
+              <img
+                src={currentTrack.coverUrl}
+                alt=""
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <Music size={72} className="text-neutral-700" />
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Track info + favorite */}
         <div className="flex items-start gap-4 mb-6 shrink-0">
