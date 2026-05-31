@@ -40,6 +40,19 @@ export async function exportUserData(): Promise<UserDataExport> {
   };
 }
 
+/**
+ * Permanently delete the signed-in user's account via the `delete-account`
+ * Edge Function. The function removes the auth user; foreign-key cascades wipe
+ * every public-table row. On success the local session is cleared.
+ */
+export async function deleteAccount(): Promise<void> {
+  const { error } = await supabase.functions.invoke("delete-account", {
+    method: "POST",
+  });
+  if (error) throw error;
+  await supabase.auth.signOut();
+}
+
 /** Trigger a browser download of the export as a pretty-printed JSON file. */
 export function downloadUserData(data: UserDataExport): void {
   const blob = new Blob([JSON.stringify(data, null, 2)], {
