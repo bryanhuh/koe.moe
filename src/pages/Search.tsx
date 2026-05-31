@@ -64,7 +64,7 @@ export default function Search() {
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search songs across Jamendo and Audius…"
+          placeholder="Search songs and anime themes…"
           autoFocus
           className="w-full bg-[#121212] border border-[#222] rounded-md py-2.5 pl-9 pr-4 text-sm placeholder:text-neutral-500 focus:outline-none focus:border-[#444]"
         />

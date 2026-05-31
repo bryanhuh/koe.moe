@@ -52,8 +52,9 @@ export default function Privacy() {
         <LegalSection title="Where it's stored">
           <p>
             Account and library data live in our database (Supabase). Streaming
-            audio plays directly from the source provider (Jamendo, Audius) — we
-            don't proxy or record what you listen to beyond your own history.
+            audio plays directly from the source provider (iTunes, AnimeThemes)
+            — we don't proxy or record what you listen to beyond your own
+            history.
           </p>
         </LegalSection>
 
