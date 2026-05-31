@@ -1,4 +1,4 @@
-import { Play, Heart, Pause, Music } from "lucide-react";
+import { Play, Heart, Pause, Music, Video } from "lucide-react";
 import { usePlayer } from "../context/PlayerContext";
 import { useAuth } from "../context/AuthContext";
 import type { Track } from "../data/mockData";
@@ -13,9 +13,11 @@ const SOURCE_LABELS: Record<NonNullable<Track["source"]>, string> = {
 function SourceBadge({
   source,
   preview,
+  hasVideo,
 }: {
   source: Track["source"];
   preview?: boolean;
+  hasVideo?: boolean;
 }) {
   if (!source || source === "local") return null;
   return (
@@ -26,6 +28,15 @@ function SourceBadge({
       {preview && (
         <span className="inline-block text-[9px] font-mono uppercase tracking-widest px-1.5 py-0.5 rounded bg-[#1a1a1a] border border-[#222] text-amber-500/70">
           30s
+        </span>
+      )}
+      {hasVideo && (
+        <span
+          className="inline-flex items-center gap-0.5 text-[9px] font-mono uppercase tracking-widest px-1.5 py-0.5 rounded bg-[#1a1a1a] border border-[#222] accent-text"
+          title="Music video available"
+        >
+          <Video size={9} />
+          MV
         </span>
       )}
     </span>
@@ -93,7 +104,7 @@ export function TrackCard({
           <div className="text-xs text-neutral-400 truncate">{track.artist}</div>
         </div>
         <div className="hidden md:block text-xs text-neutral-400 truncate">{track.album}</div>
-        <span className="hidden md:block"><SourceBadge source={track.source} preview={track.preview} /></span>
+        <span className="hidden md:block"><SourceBadge source={track.source} preview={track.preview} hasVideo={!!track.videoUrl} /></span>
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -141,7 +152,7 @@ export function TrackCard({
         {track.title}
       </div>
       <div className="text-xs text-neutral-400 truncate">{track.artist}</div>
-      <SourceBadge source={track.source} preview={track.preview} />
+      <SourceBadge source={track.source} preview={track.preview} hasVideo={!!track.videoUrl} />
     </div>
   );
 }
