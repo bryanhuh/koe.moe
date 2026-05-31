@@ -2,7 +2,7 @@ type FeaturedRow = {
   id: string;
   title: string;
   subtitle: string;
-  source: "jamendo" | "audius";
+  source: "itunes" | "animethemes";
   type: "featured";
   limit: number;
 };
@@ -11,7 +11,7 @@ type SearchRow = {
   id: string;
   title: string;
   subtitle: string;
-  source: "jamendo" | "audius";
+  source: "itunes" | "animethemes";
   type: "search";
   query: string;
   limit: number;
@@ -21,46 +21,47 @@ export type CuratedRow = FeaturedRow | SearchRow;
 
 export const curatedRows: CuratedRow[] = [
   {
-    id: "trending-jamendo",
-    title: "Trending This Week",
-    subtitle: "Most popular free music on Jamendo right now",
-    source: "jamendo",
+    id: "anime-openings",
+    title: "Anime Openings",
+    subtitle: "Full-length OP themes from AnimeThemes",
+    source: "animethemes",
     type: "featured",
     limit: 8,
   },
   {
-    id: "trending-audius",
-    title: "Rising on Audius",
-    subtitle: "What the Audius community is listening to",
-    source: "audius",
-    type: "featured",
+    id: "pop-now",
+    title: "Pop Right Now",
+    subtitle: "Mainstream hits — 30-second previews",
+    source: "itunes",
+    type: "search",
+    query: "pop",
     limit: 8,
   },
   {
-    id: "chill-focus",
-    title: "Chill & Focus",
+    id: "anime-hits",
+    title: "Shonen Anthems",
+    subtitle: "Openings from the big shonen series",
+    source: "animethemes",
+    type: "search",
+    query: "jujutsu kaisen",
+    limit: 8,
+  },
+  {
+    id: "hip-hop",
+    title: "Hip-Hop Heat",
+    subtitle: "Rap and beats — preview clips",
+    source: "itunes",
+    type: "search",
+    query: "hip hop",
+    limit: 8,
+  },
+  {
+    id: "lofi-chill",
+    title: "Lo-Fi & Chill",
     subtitle: "Laid-back sounds for deep work",
-    source: "jamendo",
+    source: "itunes",
     type: "search",
-    query: "chill acoustic",
-    limit: 8,
-  },
-  {
-    id: "electronic",
-    title: "Electronic",
-    subtitle: "Synths, beats, and dance floor energy",
-    source: "audius",
-    type: "search",
-    query: "electronic",
-    limit: 8,
-  },
-  {
-    id: "jazz-soul",
-    title: "Jazz & Soul",
-    subtitle: "Smooth, warm, and timeless",
-    source: "jamendo",
-    type: "search",
-    query: "jazz",
+    query: "lofi",
     limit: 8,
   },
 ];

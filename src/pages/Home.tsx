@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { PageHeader } from "../components/PageHeader";
 import { TrackCard } from "../components/TrackCard";
-import { jamendo } from "../lib/sources/jamendo";
-import { audius } from "../lib/sources/audius";
+import { itunes } from "../lib/sources/itunes";
+import { animethemes } from "../lib/sources/animethemes";
 import { usePlayer } from "../context/PlayerContext";
 import { curatedRows } from "../data/curated";
 import type { Track } from "../data/mockData";
@@ -33,7 +33,7 @@ function CuratedSection({ row }: { row: CuratedRow }) {
   const { registerTracks } = usePlayer();
 
   useEffect(() => {
-    const src = row.source === "jamendo" ? jamendo : audius;
+    const src = row.source === "itunes" ? itunes : animethemes;
     const fetch =
       row.type === "featured"
         ? src.getFeatured(row.limit)
@@ -47,7 +47,7 @@ function CuratedSection({ row }: { row: CuratedRow }) {
       .catch(() => setTracks([]));
   }, [row, registerTracks]);
 
-  // Hide rows that returned no results (e.g. Jamendo with no CLIENT_ID)
+  // Hide rows that returned no results (e.g. a source/API hiccup)
   if (tracks !== null && tracks.length === 0) return null;
 
   const queueIds = (tracks ?? []).map((t) => t.id);
