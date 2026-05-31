@@ -1,16 +1,22 @@
 import { useState } from "react";
-import { Download } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Download, Trash2 } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { usePlayer } from "../context/PlayerContext";
 import type { RepeatMode } from "../context/PlayerContext";
 import { useAuth } from "../context/AuthContext";
-import { exportUserData, downloadUserData } from "../lib/userData";
+import { exportUserData, downloadUserData, deleteAccount } from "../lib/userData";
 
 export default function Settings() {
   const { settings, updateSettings } = usePlayer();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const handleExport = async () => {
     setExporting(true);
@@ -22,6 +28,18 @@ export default function Settings() {
       setExportError(err instanceof Error ? err.message : "Export failed");
     } finally {
       setExporting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await deleteAccount();
+      navigate("/");
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : "Delete failed");
+      setDeleting(false);
     }
   };
 
@@ -114,6 +132,79 @@ export default function Settings() {
               {exportError}
             </div>
           )}
+        </div>
+      )}
+
+      {user && (
+        <div className="mt-10">
+          <h2 className="font-mono text-xs uppercase tracking-[0.2em] text-red-500/70 mb-3">
+            Danger zone
+          </h2>
+          <div className="bg-[#0f0f0f] border border-red-900/40 rounded-lg p-5">
+            {!confirmingDelete ? (
+              <div className="flex items-center justify-between gap-6">
+                <div>
+                  <div className="text-sm text-white">Delete my account</div>
+                  <div className="text-xs text-neutral-500 mt-0.5">
+                    Permanently erases your profile, playlists, favorites,
+                    history & uploads. This cannot be undone.
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setConfirmingDelete(true);
+                    setDeleteError(null);
+                  }}
+                  className="shrink-0 flex items-center gap-2 border border-red-900/60 text-red-400 hover:bg-red-950/40 rounded px-3 py-1.5 text-sm transition-colors"
+                >
+                  <Trash2 size={14} />
+                  Delete
+                </button>
+              </div>
+            ) : (
+              <div>
+                <div className="text-sm text-white mb-1">
+                  Are you absolutely sure?
+                </div>
+                <div className="text-xs text-neutral-500 mb-3">
+                  Type <span className="font-mono text-red-400">DELETE</span> to
+                  confirm. This is irreversible.
+                </div>
+                <input
+                  autoFocus
+                  value={confirmText}
+                  onChange={(e) => setConfirmText(e.target.value)}
+                  placeholder="DELETE"
+                  className="w-full bg-[#0a0a0a] border border-[#222] rounded px-3 py-2 text-sm font-mono focus:outline-none focus:border-red-900/60 mb-3"
+                />
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => void handleDelete()}
+                    disabled={confirmText !== "DELETE" || deleting}
+                    className="flex items-center gap-2 bg-red-600 hover:bg-red-500 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded px-3 py-1.5 text-sm transition-colors"
+                  >
+                    <Trash2 size={14} />
+                    {deleting ? "Deleting…" : "Permanently delete"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setConfirmingDelete(false);
+                      setConfirmText("");
+                    }}
+                    disabled={deleting}
+                    className="text-sm text-neutral-400 hover:text-neutral-100 px-3 py-1.5 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+            {deleteError && (
+              <div className="mt-3 text-xs text-red-400 font-mono">
+                {deleteError}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
