@@ -12,7 +12,14 @@ const INCLUDE =
 type Image = { facet?: string; link?: string };
 type Artist = { name: string };
 type Audio = { id: number; link?: string };
-type Video = { link?: string; resolution?: number; audio?: Audio };
+type Video = {
+  link?: string;
+  resolution?: number;
+  nc?: boolean; // creditless (no episode credits overlaid)
+  overlap?: string; // "None" | "Transition" | "Over"
+  source?: string; // "BD" | "WEB" | "DVD" | ...
+  audio?: Audio;
+};
 type Entry = { videos?: Video[] };
 type AnimeTheme = {
   id: number;
@@ -28,17 +35,29 @@ function pickCover(images: Image[] | undefined): string {
   return (large ?? images[0]).link ?? "";
 }
 
-// Pick a single video that carries both an audio track and a video file, so the
-// .ogg audio and .webm MV come from the same encode and line up when synced.
+const SOURCE_RANK: Record<string, number> = { BD: 3, WEB: 2, DVD: 1 };
+
+// Prefer the cleanest cut for a music-video experience: creditless, no overlap
+// with episode dialogue, best master, highest resolution.
+function scoreVideo(v: Video): number {
+  let score = 0;
+  if (v.overlap === "None") score += 8; // standalone theme, no dialogue over it
+  if (v.nc) score += 4; // creditless
+  score += SOURCE_RANK[v.source ?? ""] ?? 0;
+  score += (v.resolution ?? 0) / 1000; // tie-break toward higher res
+  return score;
+}
+
+// Pick the best video that also carries an audio track, so the .ogg audio and
+// .webm MV come from the same encode and line up when synced.
 function pickMedia(theme: AnimeTheme): { audioUrl: string; videoUrl: string } {
-  for (const entry of theme.animethemeentries ?? []) {
-    for (const video of entry.videos ?? []) {
-      if (video.audio?.link) {
-        return { audioUrl: video.audio.link, videoUrl: video.link ?? "" };
-      }
-    }
-  }
-  return { audioUrl: "", videoUrl: "" };
+  const videos = (theme.animethemeentries ?? [])
+    .flatMap((e) => e.videos ?? [])
+    .filter((v) => v.audio?.link);
+  if (!videos.length) return { audioUrl: "", videoUrl: "" };
+
+  const best = videos.reduce((a, b) => (scoreVideo(b) > scoreVideo(a) ? b : a));
+  return { audioUrl: best.audio?.link ?? "", videoUrl: best.link ?? "" };
 }
 
 function toTrack(theme: AnimeTheme): Track | null {
