@@ -58,7 +58,7 @@ Goal: ship a public PWA that lets a stranger browse free streaming catalogs, sig
 ### PWA
 
 - [ ] Real icon set + maskable variants via realfavicongenerator.net _(`feat(pwa):`)_
-- [ ] Fill out `manifest.json` (name, short_name, theme_color, display: standalone) _(`feat(pwa):`)_
+- [x] Fill out `manifest.json` (name, short_name, theme_color, display: standalone) _(`feat(pwa):`)_
 
 ### Legal / settings
 
