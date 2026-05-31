@@ -8,7 +8,9 @@ export type Track = {
   duration: number; // seconds
   coverUrl: string;
   audioUrl: string;
-  source?: "local" | "jamendo" | "audius";
+  source?: "local" | "jamendo" | "audius" | "itunes" | "animethemes";
+  // True for sources that only stream a short clip (e.g. iTunes 30s previews).
+  preview?: boolean;
 };
 
 export type Album = {
