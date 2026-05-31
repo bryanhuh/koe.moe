@@ -29,7 +29,7 @@ export function BottomNav() {
             }`
           }
         >
-          {({ isActive }) => (
+          {() => (
             <>
               <Icon size={19} />
               <span className="text-[9px] font-mono uppercase tracking-wider">
