@@ -81,6 +81,13 @@ const shuffleArray = <T,>(arr: T[]): T[] => {
   return a;
 };
 
+// A pending audio.play() promise rejects with AbortError when it's interrupted
+// by a new load()/pause() (common on flaky networks). That's transient — the
+// element's own play/pause events reconcile state — so it must be swallowed.
+// Forcing isPlaying off on it would fight the play event and cause a play/pause
+// loop. Genuine failures (e.g. NotAllowedError) should still stop playback.
+const isAbortError = (err: unknown) => (err as DOMException)?.name === "AbortError";
+
 const STORAGE_KEY = "koe:state:v1";
 
 type Persisted = {
@@ -133,6 +140,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     audioRef.current = new Audio();
     audioRef.current.preload = "metadata";
   }
+
+  const onPlayRejected = useCallback((err: unknown) => {
+    if (!isAbortError(err)) setIsPlaying(false);
+  }, []);
 
   const trackCacheRef = useRef<Map<string, Track>>(
     new Map(allTracks.map((t) => [t.id, t])),
@@ -231,7 +242,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       a.load();
     }
     if (isPlaying) {
-      void a.play().catch(() => setIsPlaying(false));
+      void a.play().catch(onPlayRejected);
     }
     // log play
     setLogs((prev) => [
@@ -252,7 +263,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const a = audioRef.current;
     if (!a) return;
     if (isPlaying) {
-      void a.play().catch(() => setIsPlaying(false));
+      void a.play().catch(onPlayRejected);
     } else {
       a.pause();
     }
