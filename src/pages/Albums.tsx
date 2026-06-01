@@ -38,7 +38,7 @@ export default function Albums() {
         title="Albums"
         subtitle={
           loading
-            ? "Loading albums from iTunes and AnimeThemes…"
+            ? "Loading anime albums…"
             : `${total} albums across ${sections.length} categories`
         }
       />
