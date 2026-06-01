@@ -306,6 +306,64 @@ function NowPlayingView({ open, onClose }: { open: boolean; onClose: () => void 
     controlsVisible ? "opacity-100" : "opacity-0 pointer-events-none"
   }`;
 
+  // ── Cover → dock animation (video layout) ──────────────────────────────────
+  // On open with an MV, the cover art shows large and centered as a loading
+  // state. Once the video has buffered enough to play, the cover shrinks and
+  // flies into the small box beside the track details, revealing the video.
+  const dockRef = useRef<HTMLDivElement | null>(null);
+  const [dockRect, setDockRect] = useState<DOMRect | null>(null);
+  const [coverPhase, setCoverPhase] = useState<"hero" | "docking" | "docked">(
+    "hero",
+  );
+
+  // Reset to the loading/hero state whenever a new MV opens; skip straight to
+  // docked if the video is already buffered (e.g. reopening the same track).
+  useEffect(() => {
+    if (!open || !videoUrl) return;
+    const v = videoRef.current;
+    setCoverPhase(v && v.readyState >= 3 ? "docked" : "hero");
+  }, [open, videoUrl, currentTrack?.id]);
+
+  // Measure the dock slot, surface the controls so the cover lands somewhere
+  // visible, then kick off the shrink transition.
+  const startDockingIfHero = () => {
+    const el = dockRef.current;
+    if (el) setDockRect(el.getBoundingClientRect());
+    revealControls();
+    setCoverPhase((p) => (p === "hero" ? "docking" : p));
+  };
+
+  // Video can play through → begin docking.
+  const handleCanPlay = () => {
+    syncVideo();
+    startDockingIfHero();
+  };
+
+  // Settle into the docked state once the shrink transition finishes.
+  useEffect(() => {
+    if (coverPhase !== "docking") return;
+    const t = setTimeout(() => setCoverPhase("docked"), 760);
+    return () => clearTimeout(t);
+  }, [coverPhase]);
+
+  // Safety net: if readiness never fires (slow network/error), dock anyway.
+  useEffect(() => {
+    if (!open || !videoUrl || coverPhase !== "hero") return;
+    const t = setTimeout(startDockingIfHero, 8000);
+    return () => clearTimeout(t);
+  }, [open, videoUrl, coverPhase]);
+
+  // Hero (large/centered) geometry plus the transform that lands it in the dock.
+  const heroSize = Math.min(window.innerWidth * 0.7, window.innerHeight * 0.5, 380);
+  const heroTop = window.innerHeight * 0.26;
+  let dockTransform = "none";
+  if (dockRect) {
+    const scale = dockRect.width / heroSize;
+    const tx = dockRect.left + dockRect.width / 2 - window.innerWidth / 2;
+    const ty = dockRect.top + dockRect.height / 2 - (heroTop + heroSize / 2);
+    dockTransform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+  }
+
   // Shared transport + seek + volume controls, rendered for both layouts.
   const transport = (
     <>
@@ -429,6 +487,46 @@ function NowPlayingView({ open, onClose }: { open: boolean; onClose: () => void 
     </div>
   );
 
+  // Title row for the video layout — includes the dock slot the cover flies into.
+  const videoTitleRow = (
+    <div className="flex items-center gap-4 mb-5">
+      <div
+        ref={dockRef}
+        className="w-16 h-16 rounded-lg overflow-hidden bg-black/30 border border-white/15 shadow-lg shrink-0"
+      >
+        {coverPhase === "docked" && currentTrack?.coverUrl && (
+          <img
+            src={currentTrack.coverUrl}
+            alt=""
+            className="w-full h-full object-cover"
+          />
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <h2 className="text-2xl font-bold text-white truncate drop-shadow">
+          {currentTrack?.title ?? "—"}
+        </h2>
+        <p className="text-sm text-neutral-300 mt-0.5 truncate drop-shadow">
+          {currentTrack?.artist ?? ""}
+        </p>
+      </div>
+      {currentTrack && (
+        <button
+          onClick={() => toggleFavorite(currentTrack.id)}
+          className={`p-2 rounded-full hover:bg-white/10 transition-colors shrink-0 ${
+            isFavorite(currentTrack.id) ? "accent-text" : "text-neutral-200"
+          }`}
+          aria-label="Toggle favorite"
+        >
+          <Heart
+            size={22}
+            fill={isFavorite(currentTrack.id) ? "currentColor" : "none"}
+          />
+        </button>
+      )}
+    </div>
+  );
+
   return (
     <div
       className={`fixed inset-0 z-50 bg-[#090909] transition-transform duration-300 ease-in-out ${
@@ -450,8 +548,11 @@ function NowPlayingView({ open, onClose }: { open: boolean; onClose: () => void 
             playsInline
             preload="metadata"
             onLoadedMetadata={syncVideo}
+            onCanPlay={handleCanPlay}
             onClick={handleVideoTap}
-            className="absolute inset-0 w-full h-full object-cover bg-black cursor-pointer"
+            className={`absolute inset-0 w-full h-full object-cover bg-black cursor-pointer transition-opacity duration-700 ${
+              coverPhase === "hero" ? "opacity-0" : "opacity-100"
+            }`}
           />
           {/* Gradient scrim: darkens top (header) and bottom (controls) */}
           <div
@@ -482,10 +583,46 @@ function NowPlayingView({ open, onClose }: { open: boolean; onClose: () => void 
             className={`absolute inset-x-0 bottom-0 z-10 px-6 md:px-10 pb-10 pt-24 ${fade}`}
           >
             <div className="max-w-3xl mx-auto w-full">
-              {titleRow}
+              {videoTitleRow}
               {transport}
             </div>
           </div>
+
+          {/* Cover art: shown large while the MV buffers, then flies into the
+              dock slot. Removed once docked (the dock slot renders it instead). */}
+          {currentTrack?.coverUrl && coverPhase !== "docked" && (
+            <>
+              <img
+                src={currentTrack.coverUrl}
+                alt=""
+                aria-hidden
+                className="absolute z-20 rounded-2xl object-cover shadow-2xl pointer-events-none"
+                style={{
+                  left: (window.innerWidth - heroSize) / 2,
+                  top: heroTop,
+                  width: heroSize,
+                  height: heroSize,
+                  transform: coverPhase === "hero" ? "none" : dockTransform,
+                  transformOrigin: "center center",
+                  transition:
+                    coverPhase === "docking"
+                      ? "transform 720ms cubic-bezier(0.22, 1, 0.36, 1)"
+                      : "none",
+                  willChange: "transform",
+                }}
+              />
+              {coverPhase === "hero" && (
+                <div
+                  className="absolute z-20 inset-x-0 text-center pointer-events-none"
+                  style={{ top: heroTop + heroSize + 24 }}
+                >
+                  <span className="text-xs font-mono uppercase tracking-[0.2em] text-white/60 animate-pulse">
+                    Preparing music video
+                  </span>
+                </div>
+              )}
+            </>
+          )}
         </div>
       ) : (
         /* ── Standard centered layout (cover art) ── */
