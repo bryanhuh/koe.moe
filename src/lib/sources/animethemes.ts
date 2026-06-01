@@ -1,5 +1,5 @@
 import type { Track } from "../../data/mockData";
-import type { Source } from "./index";
+import type { BrowseAlbum, Source } from "./index";
 
 // AnimeThemes — community database of anime OP/ED themes. No key, CORS-enabled.
 // Audio is the full-length theme as an Ogg file streamed directly from
@@ -97,6 +97,85 @@ async function fetchThemes(params: Record<string, string>): Promise<Track[]> {
       .filter((t): t is Track => t !== null);
   } catch {
     return [];
+  }
+}
+
+// ── Albums (browse) ──────────────────────────────────────────────────────────
+// AnimeThemes has no concept of an album, but an anime naturally groups its
+// themes (OP1, ED1, …). So each anime becomes an album whose tracks are its
+// themes. Unlike iTunes, the tracks come back inline with the anime, so the
+// caller gets both the albums and a flat track list to register up-front.
+const ALBUM_INCLUDE =
+  "images,animethemes.song.artists,animethemes.animethemeentries.videos.audio";
+
+type AnimeAlbumRaw = {
+  id: number;
+  name?: string;
+  year?: number;
+  season?: string;
+  images?: Image[];
+  animethemes?: AnimeTheme[];
+};
+
+function animeThemeToTrack(anime: AnimeAlbumRaw, theme: AnimeTheme): Track | null {
+  const { audioUrl, videoUrl } = pickMedia(theme);
+  const title = theme.song?.title;
+  if (!audioUrl || !title) return null;
+
+  const artists = theme.song?.artists ?? [];
+  const name = anime.name ?? "";
+  const slug = theme.slug ? ` · ${theme.slug}` : "";
+
+  return {
+    id: `animethemes:${theme.id}`,
+    title,
+    artist: artists.map((a) => a.name).join(", ") || name || "Unknown",
+    artistId: "",
+    album: `${name}${slug}`.trim(),
+    albumId: `animethemes:anime:${anime.id}`,
+    duration: 0,
+    coverUrl: pickCover(anime.images),
+    audioUrl,
+    videoUrl: videoUrl || undefined,
+    source: "animethemes",
+  };
+}
+
+export async function getAnimeAlbums(
+  limit = 18,
+): Promise<{ albums: BrowseAlbum[]; tracks: Track[] }> {
+  const url = new URL(`${BASE}/anime`);
+  url.searchParams.set("include", ALBUM_INCLUDE);
+  url.searchParams.set("sort", "-year"); // newest first — most recognisable
+  url.searchParams.set("page[size]", String(limit));
+  try {
+    const res = await fetch(url.toString());
+    if (!res.ok) return { albums: [], tracks: [] };
+    const data = (await res.json()) as { anime: AnimeAlbumRaw[] };
+
+    const albums: BrowseAlbum[] = [];
+    const tracks: Track[] = [];
+    for (const anime of data.anime ?? []) {
+      const themeTracks = (anime.animethemes ?? [])
+        .map((t) => animeThemeToTrack(anime, t))
+        .filter((t): t is Track => t !== null);
+      if (!themeTracks.length) continue;
+      tracks.push(...themeTracks);
+      albums.push({
+        id: `animethemes:anime:${anime.id}`,
+        title: anime.name ?? "Unknown",
+        artist:
+          anime.season && anime.year ? `${anime.season} ${anime.year}` : "Anime",
+        coverUrl: pickCover(anime.images),
+        year: anime.year,
+        source: "animethemes",
+        category: "Anime Openings & Endings",
+        trackIds: themeTracks.map((t) => t.id),
+      });
+    }
+    return { albums, tracks };
+  } catch {
+    return { albums: [], tracks: [] };
   }
 }
 
