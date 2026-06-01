@@ -11,6 +11,7 @@ import {
   Shuffle,
   SkipBack,
   SkipForward,
+  Video,
   Volume1,
   Volume2,
   VolumeX,
@@ -251,6 +252,62 @@ function NowPlayingView({ open, onClose }: { open: boolean; onClose: () => void 
   // double-plays sound and stays roughly in sync (incl. after seeks).
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const videoUrl = currentTrack?.videoUrl;
+  const hasVideo = !!videoUrl;
+
+  // Music videos are opt-in: the MV is a second download on top of the audio
+  // stream, so on weak connections autoplaying it starves the audio. The choice
+  // is a single global preference, remembered across sessions, default off.
+  const [videoEnabled, setVideoEnabled] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("koe:mv") === "1";
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem("koe:mv", videoEnabled ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+  }, [videoEnabled]);
+  const showVideo = hasVideo && videoEnabled;
+
+  // Transient hint shown after dropping back to cover art (manual or fallback).
+  const [mvNotice, setMvNotice] = useState<string | null>(null);
+  useEffect(() => {
+    if (!mvNotice) return;
+    const t = setTimeout(() => setMvNotice(null), 5000);
+    return () => clearTimeout(t);
+  }, [mvNotice]);
+
+  const enableVideo = () => {
+    setMvNotice(null);
+    setVideoEnabled(true);
+  };
+  const disableVideo = (notice?: string) => {
+    setVideoEnabled(false);
+    setMvNotice(notice ?? null);
+  };
+
+  // Bad-network guard: if the MV stalls for too long or errors, fall back to
+  // audio-only so the video stops competing with the audio for bandwidth.
+  const stallTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clearStallTimer = () => {
+    if (stallTimerRef.current) clearTimeout(stallTimerRef.current);
+    stallTimerRef.current = null;
+  };
+  const handleVideoWaiting = () => {
+    clearStallTimer();
+    stallTimerRef.current = setTimeout(() => {
+      disableVideo("Music video paused to keep your audio smooth on this connection.");
+    }, 7000);
+  };
+  const handleVideoError = () => {
+    clearStallTimer();
+    disableVideo("Couldn't load the music video — playing audio only.");
+  };
+  useEffect(() => () => clearStallTimer(), []);
 
   const syncVideo = () => {
     const v = videoRef.current;
@@ -261,16 +318,20 @@ function NowPlayingView({ open, onClose }: { open: boolean; onClose: () => void 
 
   useEffect(() => {
     const v = videoRef.current;
-    if (!v || !videoUrl) return;
+    if (!v || !showVideo) return;
     if (open && isPlaying) void v.play().catch(() => {});
     else v.pause();
-  }, [open, isPlaying, videoUrl, currentTrack?.id]);
+  }, [open, isPlaying, showVideo, currentTrack?.id]);
 
   useEffect(() => {
     const v = videoRef.current;
-    if (!v || !videoUrl || !open) return;
-    if (Math.abs(v.currentTime - progress) > 0.4) v.currentTime = progress;
-  }, [progress, videoUrl, open]);
+    if (!v || !showVideo || !open) return;
+    // Don't reseek a video that's mid-seek/buffering — it just thrashes the
+    // network. Catching up on the next tick is fine.
+    if (!v.seeking && Math.abs(v.currentTime - progress) > 0.4) {
+      v.currentTime = progress;
+    }
+  }, [progress, showVideo, open]);
 
   // ── Auto-hiding controls + tap-to-play (video layout only) ─────────────────
   const [controlsVisible, setControlsVisible] = useState(true);
@@ -289,12 +350,12 @@ function NowPlayingView({ open, onClose }: { open: boolean; onClose: () => void 
   useEffect(() => {
     if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
     setControlsVisible(true);
-    if (!videoUrl || !open || !isPlaying) return;
+    if (!showVideo || !open || !isPlaying) return;
     hideTimerRef.current = setTimeout(() => setControlsVisible(false), 3000);
     return () => {
       if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
     };
-  }, [isPlaying, videoUrl, open]);
+  }, [isPlaying, showVideo, open]);
 
   // Tap the video: reveal hidden controls, otherwise toggle play/pause.
   const handleVideoTap = () => {
@@ -319,10 +380,10 @@ function NowPlayingView({ open, onClose }: { open: boolean; onClose: () => void 
   // Reset to the loading/hero state whenever a new MV opens; skip straight to
   // docked if the video is already buffered (e.g. reopening the same track).
   useEffect(() => {
-    if (!open || !videoUrl) return;
+    if (!open || !showVideo) return;
     const v = videoRef.current;
     setCoverPhase(v && v.readyState >= 3 ? "docked" : "hero");
-  }, [open, videoUrl, currentTrack?.id]);
+  }, [open, showVideo, currentTrack?.id]);
 
   // Measure the dock slot, surface the controls so the cover lands somewhere
   // visible, then kick off the shrink transition.
@@ -335,6 +396,7 @@ function NowPlayingView({ open, onClose }: { open: boolean; onClose: () => void 
 
   // Video can play through → begin docking.
   const handleCanPlay = () => {
+    clearStallTimer();
     syncVideo();
     startDockingIfHero();
   };
@@ -348,10 +410,10 @@ function NowPlayingView({ open, onClose }: { open: boolean; onClose: () => void 
 
   // Safety net: if readiness never fires (slow network/error), dock anyway.
   useEffect(() => {
-    if (!open || !videoUrl || coverPhase !== "hero") return;
+    if (!open || !showVideo || coverPhase !== "hero") return;
     const t = setTimeout(startDockingIfHero, 8000);
     return () => clearTimeout(t);
-  }, [open, videoUrl, coverPhase]);
+  }, [open, showVideo, coverPhase]);
 
   // Hero (large/centered) geometry plus the transform that lands it in the dock.
   const heroSize = Math.min(window.innerWidth * 0.7, window.innerHeight * 0.5, 380);
@@ -531,10 +593,10 @@ function NowPlayingView({ open, onClose }: { open: boolean; onClose: () => void 
     <div
       className={`fixed inset-0 z-50 bg-[#090909] transition-transform duration-300 ease-in-out ${
         open ? "translate-y-0" : "translate-y-full pointer-events-none"
-      } ${videoUrl ? "" : "flex flex-col"}`}
+      } ${showVideo ? "" : "flex flex-col"}`}
       aria-hidden={!open}
     >
-      {videoUrl ? (
+      {showVideo ? (
         /* ── Immersive video layout (MV plays full-screen behind controls) ── */
         <div
           className={`absolute inset-0 ${controlsVisible ? "" : "cursor-none"}`}
@@ -549,6 +611,9 @@ function NowPlayingView({ open, onClose }: { open: boolean; onClose: () => void 
             preload="metadata"
             onLoadedMetadata={syncVideo}
             onCanPlay={handleCanPlay}
+            onPlaying={clearStallTimer}
+            onWaiting={handleVideoWaiting}
+            onError={handleVideoError}
             onClick={handleVideoTap}
             className={`absolute inset-0 w-full h-full object-cover bg-black cursor-pointer transition-opacity duration-700 ${
               coverPhase === "hero" ? "opacity-0" : "opacity-100"
@@ -573,9 +638,14 @@ function NowPlayingView({ open, onClose }: { open: boolean; onClose: () => void 
             <span className="text-xs font-mono uppercase tracking-[0.2em] text-white/80">
               Now Playing
             </span>
-            <span className="inline-flex items-center text-[9px] font-mono uppercase tracking-widest px-1.5 py-0.5 rounded bg-black/40 border border-white/15 text-white/80">
-              MV
-            </span>
+            <button
+              onClick={() => disableVideo()}
+              className="inline-flex items-center gap-1 text-[9px] font-mono uppercase tracking-widest px-2 py-1 rounded bg-white/15 border border-white/30 text-white hover:bg-white/25 transition-colors"
+              aria-pressed={true}
+              aria-label="Switch to cover art"
+            >
+              <Video size={11} /> MV
+            </button>
           </div>
 
           {/* Full-width controls anchored at the bottom */}
@@ -638,7 +708,18 @@ function NowPlayingView({ open, onClose }: { open: boolean; onClose: () => void 
             <span className="text-xs font-mono uppercase tracking-[0.2em] text-neutral-400">
               Now Playing
             </span>
-            <div className="w-9" />
+            {hasVideo ? (
+              <button
+                onClick={enableVideo}
+                className="inline-flex items-center gap-1 text-[9px] font-mono uppercase tracking-widest px-2 py-1 rounded bg-[#1a1a1a] border border-[#2a2a2a] text-neutral-300 hover:text-white hover:border-neutral-500 transition-colors"
+                aria-pressed={false}
+                aria-label="Watch music video"
+              >
+                <Video size={11} /> MV
+              </button>
+            ) : (
+              <div className="w-9" />
+            )}
           </div>
 
           <div className="flex-1 overflow-y-auto flex flex-col px-8 py-4 max-w-[480px] mx-auto w-full">
@@ -658,6 +739,12 @@ function NowPlayingView({ open, onClose }: { open: boolean; onClose: () => void 
             {titleRow}
             {transport}
           </div>
+
+          {mvNotice && (
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 max-w-[90%] px-4 py-2 rounded-full bg-black/80 border border-white/10 text-xs text-neutral-200 text-center shadow-lg">
+              {mvNotice}
+            </div>
+          )}
         </>
       )}
     </div>
