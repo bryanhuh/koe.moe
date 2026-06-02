@@ -8,6 +8,7 @@ import Home from "./pages/Home";
 import Search from "./pages/Search";
 import Library from "./pages/Library";
 import Albums from "./pages/Albums";
+import AlbumDetail from "./pages/AlbumDetail";
 import Artists from "./pages/Artists";
 import Playlists from "./pages/Playlists";
 import Favorites from "./pages/Favorites";
@@ -39,6 +40,7 @@ function App() {
                           <Route path="/search" element={<Search />} />
                           <Route path="/library" element={<Library />} />
                           <Route path="/albums" element={<Albums />} />
+                          <Route path="/albums/:albumId" element={<AlbumDetail />} />
                           <Route path="/artists" element={<Artists />} />
                           <Route path="/playlists" element={<Playlists />} />
                           <Route path="/favorites" element={<Favorites />} />
