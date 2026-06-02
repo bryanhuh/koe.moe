@@ -1,5 +1,5 @@
 import type { Track } from "../../data/mockData";
-import type { BrowseAlbum, Source } from "./index";
+import type { BrowseAlbum, BrowseArtist, Source } from "./index";
 
 // iTunes Search API — the general/mainstream catalog. No key, CORS-enabled.
 // Playback is the official 30-second `.m4a` (AAC) preview, which plays on every
@@ -98,6 +98,31 @@ export async function getTopAlbums(
   } catch {
     return [];
   }
+}
+
+// ── Artists (browse) ─────────────────────────────────────────────────────────
+// iTunes has no artist chart, so we derive a "popular artists" list from the
+// most-played albums: dedupe by artist, using the album art as the avatar.
+export async function getTopArtists(
+  limit = 18,
+  storefront = "us",
+): Promise<BrowseArtist[]> {
+  const albums = await getTopAlbums(100, storefront);
+  const seen = new Set<string>();
+  const out: BrowseArtist[] = [];
+  for (const al of albums) {
+    if (!al.artist || seen.has(al.artist)) continue;
+    seen.add(al.artist);
+    out.push({
+      id: `itunes:artist:${encodeURIComponent(al.artist)}`,
+      name: al.artist,
+      imageUrl: al.coverUrl,
+      source: "itunes",
+      subtitle: al.category,
+    });
+    if (out.length >= limit) break;
+  }
+  return out;
 }
 
 // Resolve an album's playable tracks. The lookup returns the collection as the
