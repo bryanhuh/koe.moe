@@ -141,13 +141,12 @@ function animeThemeToTrack(anime: AnimeAlbumRaw, theme: AnimeTheme): Track | nul
   };
 }
 
-export async function getAnimeAlbums(
-  limit = 18,
+async function fetchAnimeAlbums(
+  params: Record<string, string>,
 ): Promise<{ albums: BrowseAlbum[]; tracks: Track[] }> {
   const url = new URL(`${BASE}/anime`);
   url.searchParams.set("include", ALBUM_INCLUDE);
-  url.searchParams.set("sort", "-year"); // newest first — most recognisable
-  url.searchParams.set("page[size]", String(limit));
+  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   try {
     const res = await fetch(url.toString());
     if (!res.ok) return { albums: [], tracks: [] };
@@ -177,6 +176,21 @@ export async function getAnimeAlbums(
   } catch {
     return { albums: [], tracks: [] };
   }
+}
+
+// Browse: newest anime first — most recognisable for a cold start.
+export function getAnimeAlbums(
+  limit = 18,
+): Promise<{ albums: BrowseAlbum[]; tracks: Track[] }> {
+  return fetchAnimeAlbums({ sort: "-year", "page[size]": String(limit) });
+}
+
+// Search: anime matching a query, each returned as an album of its themes.
+export function searchAnimeAlbums(
+  query: string,
+  limit = 12,
+): Promise<{ albums: BrowseAlbum[]; tracks: Track[] }> {
+  return fetchAnimeAlbums({ q: query, "page[size]": String(limit) });
 }
 
 export const animethemes: Source = {
