@@ -194,11 +194,24 @@ export function searchAnimeAlbums(
 }
 
 // ── Artists (browse) ─────────────────────────────────────────────────────────
-// AnimeThemes exposes artists as first-class records with cover images. There's
-// no popularity sort, so the list is browsed by page; `hasNext` comes straight
-// from the API's pagination links (it reports no total, only next/prev).
-type ArtistRaw = { id: number; name?: string; images?: Image[] };
+// AnimeThemes exposes artists as first-class records with cover images. They're
+// keyed by `slug` (stable, human-readable) so the detail page can fetch one
+// directly — including on a cold deep-link, with no client-side cache.
+type ArtistRaw = { id: number; name?: string; slug?: string; images?: Image[] };
 
+function artistToBrowse(a: ArtistRaw): BrowseArtist | null {
+  if (!a.name || !a.slug) return null;
+  return {
+    id: `animethemes:artist:${a.slug}`,
+    name: a.name,
+    imageUrl: pickCover(a.images),
+    source: "animethemes",
+    subtitle: "Anime artist",
+  };
+}
+
+// There's no popularity sort, so the list is browsed by page; `hasNext` comes
+// straight from the API's pagination links (it reports no total, only next/prev).
 export async function getAnimeArtists(
   page = 1,
   pageSize = 24,
@@ -214,18 +227,104 @@ export async function getAnimeArtists(
       artists: ArtistRaw[];
       links?: { next?: string | null };
     };
-    const artists: BrowseArtist[] = (data.artists ?? [])
-      .filter((a) => a.name)
-      .map((a) => ({
-        id: `animethemes:artist:${a.id}`,
-        name: a.name as string,
-        imageUrl: pickCover(a.images),
-        source: "animethemes" as const,
-        subtitle: "Anime artist",
-      }));
+    const artists = (data.artists ?? [])
+      .map(artistToBrowse)
+      .filter((a): a is BrowseArtist => a !== null);
     return { artists, hasNext: Boolean(data.links?.next) };
   } catch {
     return { artists: [], hasNext: false };
+  }
+}
+
+export async function searchAnimeArtists(
+  query: string,
+  limit = 12,
+): Promise<BrowseArtist[]> {
+  const url = new URL(`${BASE}/artist`);
+  url.searchParams.set("include", "images");
+  url.searchParams.set("q", query);
+  url.searchParams.set("page[size]", String(limit));
+  try {
+    const res = await fetch(url.toString());
+    if (!res.ok) return [];
+    const data = (await res.json()) as { artists: ArtistRaw[] };
+    return (data.artists ?? [])
+      .map(artistToBrowse)
+      .filter((a): a is BrowseArtist => a !== null);
+  } catch {
+    return [];
+  }
+}
+
+// Build a track for one of an artist's songs from a specific theme appearance.
+// The artist name is known from the page (the theme itself is nested under the
+// song, so it doesn't repeat the artists relation).
+function songThemeToTrack(
+  artistName: string,
+  songTitle: string,
+  theme: AnimeTheme,
+): Track | null {
+  const { audioUrl, videoUrl } = pickMedia(theme);
+  if (!audioUrl || !songTitle) return null;
+  const animeName = theme.anime?.name ?? "";
+  const slug = theme.slug ? ` · ${theme.slug}` : "";
+  return {
+    id: `animethemes:${theme.id}`,
+    title: songTitle,
+    artist: artistName,
+    artistId: "",
+    album: `${animeName}${slug}`.trim(),
+    albumId: "",
+    duration: 0,
+    coverUrl: pickCover(theme.anime?.images),
+    audioUrl,
+    videoUrl: videoUrl || undefined,
+    source: "animethemes",
+  };
+}
+
+// Resolve an artist (by slug) and the full list of their playable themes.
+export async function getAnimeArtistDetail(
+  slug: string,
+): Promise<{ artist: BrowseArtist; tracks: Track[] } | null> {
+  const url = new URL(`${BASE}/artist/${encodeURIComponent(slug)}`);
+  url.searchParams.set(
+    "include",
+    "images,songs.animethemes.anime.images,songs.animethemes.animethemeentries.videos.audio",
+  );
+  try {
+    const res = await fetch(url.toString());
+    if (!res.ok) return null;
+    const data = (await res.json()) as {
+      artist?: ArtistRaw & {
+        songs?: { title?: string; animethemes?: AnimeTheme[] }[];
+      };
+    };
+    const a = data.artist;
+    if (!a || !a.name || !a.slug) return null;
+
+    const tracks: Track[] = [];
+    const seen = new Set<string>();
+    for (const song of a.songs ?? []) {
+      for (const theme of song.animethemes ?? []) {
+        const t = songThemeToTrack(a.name, song.title ?? "", theme);
+        if (t && !seen.has(t.id)) {
+          seen.add(t.id);
+          tracks.push(t);
+        }
+      }
+    }
+
+    const artist: BrowseArtist = {
+      id: `animethemes:artist:${a.slug}`,
+      name: a.name,
+      imageUrl: pickCover(a.images),
+      source: "animethemes",
+      subtitle: "Anime artist",
+    };
+    return { artist, tracks };
+  } catch {
+    return null;
   }
 }
 
