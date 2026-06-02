@@ -125,6 +125,41 @@ export async function getTopArtists(
   return out;
 }
 
+// Songs by a given artist name. `artistTerm` scopes the search to the artist
+// field so we get their catalog rather than songs that merely mention the name.
+export function getItunesArtistSongs(name: string, limit = 50): Promise<Track[]> {
+  return fetchResults({
+    term: name,
+    attribute: "artistTerm",
+    entity: "song",
+    limit: String(limit),
+  });
+}
+
+// iTunes' artist search returns no artwork, so we instead search songs and
+// dedupe by artist, using each artist's first track cover as the avatar.
+export async function searchItunesArtists(
+  query: string,
+  limit = 12,
+): Promise<BrowseArtist[]> {
+  const tracks = await fetchResults({ term: query, limit: String(limit * 4) });
+  const seen = new Set<string>();
+  const out: BrowseArtist[] = [];
+  for (const t of tracks) {
+    if (!t.artist || seen.has(t.artist)) continue;
+    seen.add(t.artist);
+    out.push({
+      id: `itunes:artist:${encodeURIComponent(t.artist)}`,
+      name: t.artist,
+      imageUrl: t.coverUrl,
+      source: "itunes",
+      subtitle: "Artist",
+    });
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
 // Resolve an album's playable tracks. The lookup returns the collection as the
 // first row followed by its songs; we keep only songs that have a preview.
 export async function getAlbumTracks(albumId: string): Promise<Track[]> {
