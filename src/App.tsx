@@ -10,6 +10,7 @@ import Library from "./pages/Library";
 import Albums from "./pages/Albums";
 import AlbumDetail from "./pages/AlbumDetail";
 import Artists from "./pages/Artists";
+import ArtistDetail from "./pages/ArtistDetail";
 import Playlists from "./pages/Playlists";
 import Favorites from "./pages/Favorites";
 import Logs from "./pages/Logs";
@@ -42,6 +43,7 @@ function App() {
                           <Route path="/albums" element={<Albums />} />
                           <Route path="/albums/:albumId" element={<AlbumDetail />} />
                           <Route path="/artists" element={<Artists />} />
+                          <Route path="/artists/:artistId" element={<ArtistDetail />} />
                           <Route path="/playlists" element={<Playlists />} />
                           <Route path="/favorites" element={<Favorites />} />
                           <Route path="/logs" element={<Logs />} />
