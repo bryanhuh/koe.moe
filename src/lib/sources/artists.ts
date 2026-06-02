@@ -1,5 +1,5 @@
 import type { Track } from "../../data/mockData";
-import type { BrowseArtist } from "./index";
+import type { BrowseArtist, SourceId } from "./index";
 import {
   getAnimeArtists,
   getAnimeArtistDetail,
@@ -43,7 +43,18 @@ export async function searchArtists(query: string): Promise<BrowseArtist[]> {
     searchAnimeArtists(query, 12).catch(() => [] as BrowseArtist[]),
     searchItunesArtists(query, 12).catch(() => [] as BrowseArtist[]),
   ]);
-  return [...anime, ...itunes];
+  // An artist can surface from both sources (e.g. LiSA). Show one card per name
+  // — preferring the AnimeThemes entry (real photo) — since the artist page
+  // merges sources anyway.
+  const seen = new Set<string>();
+  const out: BrowseArtist[] = [];
+  for (const a of [...anime, ...itunes]) {
+    const key = a.name.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(a);
+  }
+  return out;
 }
 
 /**
@@ -71,4 +82,93 @@ export async function getArtistById(
     return { artist, tracks };
   }
   return null;
+}
+
+// One source's worth of an artist's tracks.
+export type ArtistSourceTracks = { source: SourceId; tracks: Track[] };
+
+// A unified artist view spanning every source that has their songs. `primary`
+// is the source the user came from (the default tab); `sources` only includes
+// sources that actually returned tracks — so the UI offers a choice only when
+// there's more than one.
+export type ArtistProfile = {
+  name: string;
+  imageUrl: string;
+  primary: SourceId;
+  sources: ArtistSourceTracks[];
+};
+
+// AnimeThemes themes for an artist, matched by exact name (avoids pulling a
+// similarly-named but different artist, e.g. "LiSA" vs "ELISA").
+async function animeTracksByName(
+  name: string,
+): Promise<{ tracks: Track[]; imageUrl: string }> {
+  const found = await searchAnimeArtists(name, 10).catch(() => [] as BrowseArtist[]);
+  const match = found.find((a) => a.name.toLowerCase() === name.toLowerCase());
+  if (!match) return { tracks: [], imageUrl: "" };
+  const slug = match.id.slice("animethemes:artist:".length);
+  const detail = await getAnimeArtistDetail(slug);
+  return {
+    tracks: detail?.tracks ?? [],
+    imageUrl: detail?.artist.imageUrl ?? match.imageUrl,
+  };
+}
+
+// iTunes songs for an artist, kept only when the track's artist matches exactly.
+// iTunes' artistTerm search is fuzzy and pulls in collaborators and namesakes;
+// the match is case-sensitive on purpose so distinct artists that differ only
+// in casing stay separate (anime "LiSA" vs. BLACKPINK "LISA").
+async function itunesTracksByName(name: string): Promise<Track[]> {
+  const tracks = await getItunesArtistSongs(name).catch(() => [] as Track[]);
+  return tracks.filter((t) => t.artist.trim() === name.trim());
+}
+
+/**
+ * Resolve an artist across every source that has their songs. The id's source
+ * is the primary (default tab); the other source is cross-resolved by exact
+ * name. Returns null if no source yields any playable track.
+ */
+export async function getArtistProfile(id: string): Promise<ArtistProfile | null> {
+  let name = "";
+  let imageUrl = "";
+  let animeTracks: Track[] = [];
+  let primary: SourceId;
+
+  if (id.startsWith("animethemes:artist:")) {
+    primary = "animethemes";
+    const slug = id.slice("animethemes:artist:".length);
+    const detail = await getAnimeArtistDetail(slug);
+    if (!detail) return null;
+    name = detail.artist.name;
+    imageUrl = detail.artist.imageUrl;
+    animeTracks = detail.tracks;
+  } else if (id.startsWith("itunes:artist:")) {
+    primary = "itunes";
+    name = decodeURIComponent(id.slice("itunes:artist:".length));
+  } else {
+    return null;
+  }
+  if (!name) return null;
+
+  // Fill in whichever source we don't already have, by exact name.
+  const [itunesTracks, anime] = await Promise.all([
+    itunesTracksByName(name),
+    animeTracks.length
+      ? Promise.resolve({ tracks: animeTracks, imageUrl })
+      : animeTracksByName(name),
+  ]);
+  animeTracks = anime.tracks;
+  if (!imageUrl) imageUrl = anime.imageUrl;
+
+  // Stable tab order (AnimeThemes, then iTunes); only sources with tracks.
+  const sources: ArtistSourceTracks[] = [];
+  if (animeTracks.length)
+    sources.push({ source: "animethemes", tracks: animeTracks });
+  if (itunesTracks.length) sources.push({ source: "itunes", tracks: itunesTracks });
+  if (!sources.length) return null;
+
+  if (!imageUrl)
+    imageUrl = animeTracks[0]?.coverUrl ?? itunesTracks[0]?.coverUrl ?? "";
+
+  return { name, imageUrl, primary, sources };
 }
