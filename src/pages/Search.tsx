@@ -2,9 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { Loader2, Search as SearchIcon, SearchX } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { TrackCard } from "../components/TrackCard";
+import { BrowseAlbumCard } from "../components/BrowseAlbumCard";
 import { searchAllSources } from "../lib/sources/registry";
+import { searchAlbums } from "../lib/sources/albums";
 import { usePlayer } from "../context/PlayerContext";
 import type { Track } from "../data/mockData";
+import type { BrowseAlbum } from "../lib/sources/index";
 
 const SUGGESTIONS = [
   "Blinding Lights",
@@ -46,6 +49,7 @@ function scoreTrack(t: Track, term: string): number {
 export default function Search() {
   const [q, setQ] = useState("");
   const [tracks, setTracks] = useState<Track[]>([]);
+  const [albums, setAlbums] = useState<BrowseAlbum[]>([]);
   const [loading, setLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { registerTracks } = usePlayer();
@@ -54,6 +58,7 @@ export default function Search() {
     const term = q.trim();
     if (!term) {
       setTracks([]);
+      setAlbums([]);
       setLoading(false);
       return;
     }
@@ -62,13 +67,17 @@ export default function Search() {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     debounceRef.current = setTimeout(async () => {
-      const merged: Track[] = await searchAllSources(term, 10);
+      const [merged, foundAlbums] = await Promise.all([
+        searchAllSources(term, 10),
+        searchAlbums(term, 12),
+      ]);
 
       const termLower = term.toLowerCase();
       merged.sort((a, b) => scoreTrack(b, termLower) - scoreTrack(a, termLower));
 
       registerTracks(merged);
       setTracks(merged);
+      setAlbums(foundAlbums);
       setLoading(false);
     }, 250);
 
@@ -128,7 +137,7 @@ export default function Search() {
 
       {q.trim() && loading && tracks.length === 0 && <SkeletonRows />}
 
-      {q.trim() && !loading && tracks.length === 0 && (
+      {q.trim() && !loading && tracks.length === 0 && albums.length === 0 && (
         <div className="flex flex-col items-center justify-center text-center py-20">
           <SearchX size={30} className="text-neutral-700 mb-4" />
           <p className="text-sm text-neutral-300">
@@ -140,18 +149,33 @@ export default function Search() {
         </div>
       )}
 
-      {tracks.length > 0 && (
-        <section>
-          <h2 className="text-sm font-mono uppercase tracking-wide text-neutral-300 mb-3">
-            Songs ({tracks.length})
-          </h2>
-          <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-lg p-2">
-            {tracks.map((t, i) => (
-              <TrackCard key={t.id} track={t} variant="row" index={i} queueIds={queueIds} />
-            ))}
-          </div>
-        </section>
-      )}
+      <div className="space-y-8">
+        {albums.length > 0 && (
+          <section>
+            <h2 className="text-sm font-mono uppercase tracking-wide text-neutral-300 mb-3">
+              Albums ({albums.length})
+            </h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              {albums.map((album) => (
+                <BrowseAlbumCard key={album.id} album={album} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {tracks.length > 0 && (
+          <section>
+            <h2 className="text-sm font-mono uppercase tracking-wide text-neutral-300 mb-3">
+              Songs ({tracks.length})
+            </h2>
+            <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-lg p-2">
+              {tracks.map((t, i) => (
+                <TrackCard key={t.id} track={t} variant="row" index={i} queueIds={queueIds} />
+              ))}
+            </div>
+          </section>
+        )}
+      </div>
     </div>
   );
 }
