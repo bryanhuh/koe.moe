@@ -194,34 +194,38 @@ export function searchAnimeAlbums(
 }
 
 // ── Artists (browse) ─────────────────────────────────────────────────────────
-// AnimeThemes exposes artists as first-class records with cover images. Not all
-// have art, so we over-fetch and keep the ones that do until we hit `limit`.
+// AnimeThemes exposes artists as first-class records with cover images. There's
+// no popularity sort, so the list is browsed by page; `hasNext` comes straight
+// from the API's pagination links (it reports no total, only next/prev).
 type ArtistRaw = { id: number; name?: string; images?: Image[] };
 
-export async function getAnimeArtists(limit = 18): Promise<BrowseArtist[]> {
+export async function getAnimeArtists(
+  page = 1,
+  pageSize = 24,
+): Promise<{ artists: BrowseArtist[]; hasNext: boolean }> {
   const url = new URL(`${BASE}/artist`);
   url.searchParams.set("include", "images");
-  url.searchParams.set("page[size]", String(limit * 4));
+  url.searchParams.set("page[size]", String(pageSize));
+  url.searchParams.set("page[number]", String(page));
   try {
     const res = await fetch(url.toString());
-    if (!res.ok) return [];
-    const data = (await res.json()) as { artists: ArtistRaw[] };
-    const out: BrowseArtist[] = [];
-    for (const a of data.artists ?? []) {
-      const imageUrl = pickCover(a.images);
-      if (!imageUrl || !a.name) continue;
-      out.push({
+    if (!res.ok) return { artists: [], hasNext: false };
+    const data = (await res.json()) as {
+      artists: ArtistRaw[];
+      links?: { next?: string | null };
+    };
+    const artists: BrowseArtist[] = (data.artists ?? [])
+      .filter((a) => a.name)
+      .map((a) => ({
         id: `animethemes:artist:${a.id}`,
-        name: a.name,
-        imageUrl,
-        source: "animethemes",
+        name: a.name as string,
+        imageUrl: pickCover(a.images),
+        source: "animethemes" as const,
         subtitle: "Anime artist",
-      });
-      if (out.length >= limit) break;
-    }
-    return out;
+      }));
+    return { artists, hasNext: Boolean(data.links?.next) };
   } catch {
-    return [];
+    return { artists: [], hasNext: false };
   }
 }
 

@@ -2,27 +2,25 @@ import type { BrowseArtist } from "./index";
 import { getAnimeArtists } from "./animethemes";
 import { getTopArtists } from "./itunes";
 
-export type ArtistSection = {
-  id: string;
-  title: string;
-  artists: BrowseArtist[];
-};
+export const ANIME_ARTISTS_PER_PAGE = 24;
 
 /**
- * Browsable artists bucketed into sections, one per source: iTunes "popular"
- * artists (derived from the top-albums chart) and AnimeThemes artists. Sources
- * are fetched in parallel and a failure in one never blocks the other.
+ * iTunes "popular" artists, derived from the top-albums chart. This is a fixed
+ * curated set (no pagination) — it loads once.
  */
-export async function getArtistSections(): Promise<ArtistSection[]> {
-  const [popular, anime] = await Promise.all([
-    getTopArtists(18).catch(() => [] as BrowseArtist[]),
-    getAnimeArtists(18).catch(() => [] as BrowseArtist[]),
-  ]);
+export function getPopularArtists(): Promise<BrowseArtist[]> {
+  return getTopArtists(18).catch(() => [] as BrowseArtist[]);
+}
 
-  const sections: ArtistSection[] = [];
-  if (popular.length)
-    sections.push({ id: "popular", title: "Popular Artists", artists: popular });
-  if (anime.length)
-    sections.push({ id: "anime", title: "Anime Artists", artists: anime });
-  return sections;
+/**
+ * One page of AnimeThemes artists. There's no popularity ranking, so the list
+ * is browsed by page; `hasNext` drives the pager (the API reports no total).
+ */
+export function getAnimeArtistsPage(
+  page = 1,
+): Promise<{ artists: BrowseArtist[]; hasNext: boolean }> {
+  return getAnimeArtists(page, ANIME_ARTISTS_PER_PAGE).catch(() => ({
+    artists: [] as BrowseArtist[],
+    hasNext: false,
+  }));
 }
