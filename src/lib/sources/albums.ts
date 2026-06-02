@@ -1,6 +1,6 @@
 import type { Track } from "../../data/mockData";
 import type { BrowseAlbum } from "./index";
-import { getAnimeAlbums } from "./animethemes";
+import { getAnimeAlbums, searchAnimeAlbums } from "./animethemes";
 import { getAlbumTracks } from "./itunes";
 
 export type AlbumSection = {
@@ -16,11 +16,17 @@ const albumIndex = new Map<string, BrowseAlbum>();
 const trackIndex = new Map<string, Track>();
 let loadPromise: Promise<{ sections: AlbumSection[]; tracks: Track[] }> | null = null;
 
+// Keep an album (and its tracks) resolvable by id from anywhere — both browse
+// and search funnel through here so getAlbumById can find either.
+function indexAlbums(albums: BrowseAlbum[], tracks: Track[]) {
+  for (const a of albums) albumIndex.set(a.id, a);
+  for (const t of tracks) trackIndex.set(t.id, t);
+}
+
 function loadAll(): Promise<{ sections: AlbumSection[]; tracks: Track[] }> {
   if (!loadPromise) {
     loadPromise = getAnimeAlbums(24).then(({ albums, tracks }) => {
-      for (const a of albums) albumIndex.set(a.id, a);
-      for (const t of tracks) trackIndex.set(t.id, t);
+      indexAlbums(albums, tracks);
       const sections: AlbumSection[] = albums.length
         ? [{ id: "anime", title: "Anime Openings & Endings", albums }]
         : [];
@@ -44,15 +50,31 @@ export function getAlbumSections(): Promise<{
 }
 
 /**
+ * Search for albums (AnimeThemes: anime grouped by their themes). Results are
+ * indexed so the detail page can resolve them by id afterwards.
+ */
+export async function searchAlbums(
+  query: string,
+  limit = 12,
+): Promise<BrowseAlbum[]> {
+  const { albums, tracks } = await searchAnimeAlbums(query, limit);
+  indexAlbums(albums, tracks);
+  return albums;
+}
+
+/**
  * Resolve a single album and its playable tracks by id, for the detail page.
  * Falls back to lazily loading the browse list (deep-link / refresh) so the
- * album can be found even if the Albums page was never mounted.
+ * album can be found even if it wasn't already indexed by browse or search.
  */
 export async function getAlbumById(
   id: string,
 ): Promise<{ album: BrowseAlbum; tracks: Track[] } | null> {
-  await loadAll();
-  const album = albumIndex.get(id);
+  let album = albumIndex.get(id);
+  if (!album) {
+    await loadAll();
+    album = albumIndex.get(id);
+  }
   if (!album) return null;
 
   // AnimeThemes ships tracks inline (already indexed); iTunes needs a lookup.
