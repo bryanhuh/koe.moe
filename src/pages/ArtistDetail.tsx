@@ -1,29 +1,35 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, Play, User } from "lucide-react";
 import { TrackCard } from "../components/TrackCard";
 import { usePlayer } from "../context/PlayerContext";
-import { getArtistById } from "../lib/sources/artists";
-import type { BrowseArtist } from "../lib/sources/index";
-import type { Track } from "../data/mockData";
+import { getArtistProfile, type ArtistProfile } from "../lib/sources/artists";
+import type { SourceId } from "../lib/sources/index";
+
+const SOURCE_LABELS: Record<SourceId, string> = {
+  itunes: "iTunes",
+  animethemes: "AnimeThemes",
+};
 
 export default function ArtistDetail() {
   const { artistId } = useParams<{ artistId: string }>();
   const { playAlbum, registerTracks } = usePlayer();
-  const [artist, setArtist] = useState<BrowseArtist | null>(null);
-  const [tracks, setTracks] = useState<Track[]>([]);
+  const [profile, setProfile] = useState<ArtistProfile | null>(null);
+  const [active, setActive] = useState<SourceId | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!artistId) return;
     let cancelled = false;
     setLoading(true);
-    getArtistById(artistId).then((result) => {
+    getArtistProfile(artistId).then((result) => {
       if (cancelled) return;
       if (result) {
-        registerTracks(result.tracks);
-        setArtist(result.artist);
-        setTracks(result.tracks);
+        // Register every source's tracks so playback resolves across tabs.
+        for (const s of result.sources) registerTracks(s.tracks);
+        setProfile(result);
+        const hasPrimary = result.sources.some((s) => s.source === result.primary);
+        setActive(hasPrimary ? result.primary : result.sources[0].source);
       }
       setLoading(false);
     });
@@ -32,6 +38,10 @@ export default function ArtistDetail() {
     };
   }, [artistId, registerTracks]);
 
+  const tracks = useMemo(
+    () => profile?.sources.find((s) => s.source === active)?.tracks ?? [],
+    [profile, active],
+  );
   const trackIds = tracks.map((t) => t.id);
 
   return (
@@ -46,7 +56,7 @@ export default function ArtistDetail() {
 
       {loading && <DetailSkeleton />}
 
-      {!loading && !artist && (
+      {!loading && !profile && (
         <div className="flex flex-col items-center justify-center text-center py-20">
           <User size={30} className="text-neutral-700 mb-4" />
           <p className="text-sm text-neutral-300">Couldn't find this artist.</p>
@@ -56,13 +66,13 @@ export default function ArtistDetail() {
         </div>
       )}
 
-      {!loading && artist && (
+      {!loading && profile && active && (
         <>
           <div className="flex flex-col sm:flex-row gap-6 items-center sm:items-end mb-8">
-            {artist.imageUrl ? (
+            {profile.imageUrl ? (
               <img
-                src={artist.imageUrl}
-                alt={artist.name}
+                src={profile.imageUrl}
+                alt={profile.name}
                 className="w-40 h-40 sm:w-48 sm:h-48 rounded-full object-cover bg-[#1a1a1a] shadow-xl shrink-0"
               />
             ) : (
@@ -72,13 +82,14 @@ export default function ArtistDetail() {
             )}
             <div className="min-w-0 text-center sm:text-left">
               <div className="font-mono uppercase text-xs tracking-[0.25em] text-neutral-500 mb-2">
-                {artist.subtitle}
+                Artist
               </div>
               <h1 className="font-mono text-3xl font-extrabold tracking-tight break-words">
-                {artist.name}
+                {profile.name}
               </h1>
               <div className="text-sm text-neutral-400 mt-1">
                 {tracks.length} track{tracks.length === 1 ? "" : "s"}
+                {profile.sources.length > 1 ? ` · on ${SOURCE_LABELS[active]}` : ""}
               </div>
               {trackIds.length > 0 && (
                 <button
@@ -92,23 +103,40 @@ export default function ArtistDetail() {
             </div>
           </div>
 
-          {tracks.length === 0 ? (
-            <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-lg p-12 text-center text-sm text-neutral-400">
-              No playable tracks for this artist.
-            </div>
-          ) : (
-            <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-lg p-2">
-              {tracks.map((t, i) => (
-                <TrackCard
-                  key={t.id}
-                  track={t}
-                  variant="row"
-                  index={i}
-                  queueIds={trackIds}
-                />
-              ))}
+          {/* Source tabs — only when the artist has songs on more than one source. */}
+          {profile.sources.length > 1 && (
+            <div className="flex items-center gap-2 border-b border-[#1a1a1a] mb-4">
+              {profile.sources.map((s) => {
+                const isActive = s.source === active;
+                return (
+                  <button
+                    key={s.source}
+                    onClick={() => setActive(s.source)}
+                    className={`px-4 py-2 -mb-px text-sm border-b-2 transition-colors ${
+                      isActive
+                        ? "accent-text border-current"
+                        : "text-neutral-400 border-transparent hover:text-neutral-200"
+                    }`}
+                  >
+                    {SOURCE_LABELS[s.source]}{" "}
+                    <span className="text-neutral-600">({s.tracks.length})</span>
+                  </button>
+                );
+              })}
             </div>
           )}
+
+          <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-lg p-2">
+            {tracks.map((t, i) => (
+              <TrackCard
+                key={t.id}
+                track={t}
+                variant="row"
+                index={i}
+                queueIds={trackIds}
+              />
+            ))}
+          </div>
         </>
       )}
     </div>
