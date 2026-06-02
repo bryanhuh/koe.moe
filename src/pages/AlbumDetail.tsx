@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Disc3, Loader2, Play } from "lucide-react";
+import { ArrowLeft, Disc3, Play } from "lucide-react";
 import { TrackCard } from "../components/TrackCard";
 import { usePlayer } from "../context/PlayerContext";
 import { getAlbumById } from "../lib/sources/albums";
