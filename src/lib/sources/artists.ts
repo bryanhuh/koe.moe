@@ -43,13 +43,14 @@ export async function searchArtists(query: string): Promise<BrowseArtist[]> {
     searchAnimeArtists(query, 12).catch(() => [] as BrowseArtist[]),
     searchItunesArtists(query, 12).catch(() => [] as BrowseArtist[]),
   ]);
-  // An artist can surface from both sources (e.g. LiSA). Show one card per name
-  // — preferring the AnimeThemes entry (real photo) — since the artist page
-  // merges sources anyway.
+  // An artist can surface from both sources (e.g. LiSA). Collapse to one card
+  // per exact name — preferring the AnimeThemes entry (real photo) — since the
+  // artist page merges those sources anyway. The match is case-sensitive so two
+  // distinct artists that differ only in casing ("LiSA" vs "LISA") both show.
   const seen = new Set<string>();
   const out: BrowseArtist[] = [];
   for (const a of [...anime, ...itunes]) {
-    const key = a.name.toLowerCase();
+    const key = a.name.trim();
     if (seen.has(key)) continue;
     seen.add(key);
     out.push(a);
@@ -98,13 +99,14 @@ export type ArtistProfile = {
   sources: ArtistSourceTracks[];
 };
 
-// AnimeThemes themes for an artist, matched by exact name (avoids pulling a
-// similarly-named but different artist, e.g. "LiSA" vs "ELISA").
+// AnimeThemes themes for an artist, matched by exact (case-sensitive) name.
+// The casing is load-bearing: the Japanese singer is "LiSA" and the K-pop
+// artist is "LISA" — matching loosely would merge two distinct artists.
 async function animeTracksByName(
   name: string,
 ): Promise<{ tracks: Track[]; imageUrl: string }> {
   const found = await searchAnimeArtists(name, 10).catch(() => [] as BrowseArtist[]);
-  const match = found.find((a) => a.name.toLowerCase() === name.toLowerCase());
+  const match = found.find((a) => a.name.trim() === name.trim());
   if (!match) return { tracks: [], imageUrl: "" };
   const slug = match.id.slice("animethemes:artist:".length);
   const detail = await getAnimeArtistDetail(slug);
