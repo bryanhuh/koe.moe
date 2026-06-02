@@ -23,3 +23,15 @@ export type BrowseAlbum = {
   category: string;
   trackIds: string[];
 };
+
+// A browsable artist from any source. AnimeThemes exposes artists as first-class
+// records with real images; iTunes has no artist feed, so they're derived from
+// the top-albums chart (album art stands in for the avatar). `subtitle` is a
+// short descriptor shown under the name (a genre, or "Anime artist").
+export type BrowseArtist = {
+  id: string;
+  name: string;
+  imageUrl: string;
+  source: SourceId;
+  subtitle: string;
+};
