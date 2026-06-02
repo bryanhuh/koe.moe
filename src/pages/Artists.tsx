@@ -16,53 +16,92 @@ import {
 } from "../lib/sources/artists";
 import type { BrowseArtist } from "../lib/sources/index";
 
+// Module-level cache so the search and browse state survive unmount/remount —
+// opening an artist and pressing back returns to the same query/results and the
+// same page of the roster. `term` is the query the cached results belong to.
+const cache: {
+  q: string;
+  term: string;
+  results: BrowseArtist[];
+  popular: BrowseArtist[];
+  anime: BrowseArtist[];
+  page: number;
+  hasNext: boolean;
+  loaded: boolean;
+} = {
+  q: "",
+  term: "",
+  results: [],
+  popular: [],
+  anime: [],
+  page: 1,
+  hasNext: false,
+  loaded: false,
+};
+
 export default function Artists() {
-  const [popular, setPopular] = useState<BrowseArtist[]>([]);
-  const [anime, setAnime] = useState<BrowseArtist[]>([]);
-  const [page, setPage] = useState(1);
-  const [hasNext, setHasNext] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
+  const [popular, setPopular] = useState<BrowseArtist[]>(cache.popular);
+  const [anime, setAnime] = useState<BrowseArtist[]>(cache.anime);
+  const [page, setPage] = useState(cache.page);
+  const [hasNext, setHasNext] = useState(cache.hasNext);
+  const [initialLoading, setInitialLoading] = useState(!cache.loaded);
   const [paging, setPaging] = useState(false);
 
   // Search
-  const [q, setQ] = useState("");
-  const [results, setResults] = useState<BrowseArtist[]>([]);
+  const [q, setQ] = useState(cache.q);
+  const [results, setResults] = useState<BrowseArtist[]>(cache.results);
   const [searching, setSearching] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchActive = q.trim().length > 0;
 
   useEffect(() => {
     const term = q.trim();
+    cache.q = q;
     if (!term) {
       setResults([]);
       setSearching(false);
+      cache.term = "";
+      cache.results = [];
       return;
     }
+    // Results already cached for this exact term (restored on remount) — keep them.
+    if (term === cache.term) return;
     setSearching(true);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
       const found = await searchArtists(term);
       setResults(found);
       setSearching(false);
+      cache.term = term;
+      cache.results = found;
     }, 250);
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [q]);
 
-  // iTunes popular artists — fixed chart, loads once.
+  // iTunes popular artists — fixed chart, loads once (cached for the session).
   useEffect(() => {
+    if (cache.popular.length) return;
     let cancelled = false;
     getPopularArtists().then((a) => {
-      if (!cancelled) setPopular(a);
+      if (cancelled) return;
+      setPopular(a);
+      cache.popular = a;
     });
     return () => {
       cancelled = true;
     };
   }, []);
 
-  // AnimeThemes artists — refetched whenever the page changes.
+  // AnimeThemes artists — refetched whenever the page changes, but skipped when
+  // the current page is already cached (e.g. restored on remount).
   useEffect(() => {
+    if (cache.loaded && cache.page === page) {
+      setAnime(cache.anime);
+      setHasNext(cache.hasNext);
+      return;
+    }
     let cancelled = false;
     setPaging(true);
     getAnimeArtistsPage(page).then(({ artists, hasNext }) => {
@@ -71,6 +110,10 @@ export default function Artists() {
       setHasNext(hasNext);
       setPaging(false);
       setInitialLoading(false);
+      cache.anime = artists;
+      cache.hasNext = hasNext;
+      cache.page = page;
+      cache.loaded = true;
     });
     return () => {
       cancelled = true;
