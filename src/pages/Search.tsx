@@ -46,22 +46,40 @@ function scoreTrack(t: Track, term: string): number {
   return score;
 }
 
+// Module-level cache so the query and results survive unmount/remount — e.g.
+// searching, opening a result, then pressing back returns to the same results.
+// `term` is the query the cached results belong to, used to skip a refetch.
+const cache: { q: string; term: string; tracks: Track[]; albums: BrowseAlbum[] } = {
+  q: "",
+  term: "",
+  tracks: [],
+  albums: [],
+};
+
 export default function Search() {
-  const [q, setQ] = useState("");
-  const [tracks, setTracks] = useState<Track[]>([]);
-  const [albums, setAlbums] = useState<BrowseAlbum[]>([]);
+  const [q, setQ] = useState(cache.q);
+  const [tracks, setTracks] = useState<Track[]>(cache.tracks);
+  const [albums, setAlbums] = useState<BrowseAlbum[]>(cache.albums);
   const [loading, setLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { registerTracks } = usePlayer();
 
   useEffect(() => {
     const term = q.trim();
+    cache.q = q;
+
     if (!term) {
       setTracks([]);
       setAlbums([]);
       setLoading(false);
+      cache.term = "";
+      cache.tracks = [];
+      cache.albums = [];
       return;
     }
+
+    // Results already cached for this exact term (restored on remount) — keep them.
+    if (term === cache.term) return;
 
     setLoading(true);
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -79,6 +97,9 @@ export default function Search() {
       setTracks(merged);
       setAlbums(foundAlbums);
       setLoading(false);
+      cache.term = term;
+      cache.tracks = merged;
+      cache.albums = foundAlbums;
     }, 250);
 
     return () => {
