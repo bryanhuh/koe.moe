@@ -1,5 +1,5 @@
 import type { Track } from "../../data/mockData";
-import type { BrowseAlbum, Source } from "./index";
+import type { BrowseAlbum, BrowseArtist, Source } from "./index";
 
 // AnimeThemes — community database of anime OP/ED themes. No key, CORS-enabled.
 // Audio is the full-length theme as an Ogg file streamed directly from
@@ -191,6 +191,38 @@ export function searchAnimeAlbums(
   limit = 12,
 ): Promise<{ albums: BrowseAlbum[]; tracks: Track[] }> {
   return fetchAnimeAlbums({ q: query, "page[size]": String(limit) });
+}
+
+// ── Artists (browse) ─────────────────────────────────────────────────────────
+// AnimeThemes exposes artists as first-class records with cover images. Not all
+// have art, so we over-fetch and keep the ones that do until we hit `limit`.
+type ArtistRaw = { id: number; name?: string; images?: Image[] };
+
+export async function getAnimeArtists(limit = 18): Promise<BrowseArtist[]> {
+  const url = new URL(`${BASE}/artist`);
+  url.searchParams.set("include", "images");
+  url.searchParams.set("page[size]", String(limit * 4));
+  try {
+    const res = await fetch(url.toString());
+    if (!res.ok) return [];
+    const data = (await res.json()) as { artists: ArtistRaw[] };
+    const out: BrowseArtist[] = [];
+    for (const a of data.artists ?? []) {
+      const imageUrl = pickCover(a.images);
+      if (!imageUrl || !a.name) continue;
+      out.push({
+        id: `animethemes:artist:${a.id}`,
+        name: a.name,
+        imageUrl,
+        source: "animethemes",
+        subtitle: "Anime artist",
+      });
+      if (out.length >= limit) break;
+    }
+    return out;
+  } catch {
+    return [];
+  }
 }
 
 export const animethemes: Source = {
