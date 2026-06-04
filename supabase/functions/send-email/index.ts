@@ -2,10 +2,16 @@
 //
 // Setup (one-time, in Supabase Dashboard):
 //   1. Authentication → Hooks → "Send Email" → set to this function's URL
-//   2. Copy the generated hook secret, then run:
+//   2. Copy the generated hook secret (looks like "v1,whsec_..."), then run:
 //        supabase secrets set SEND_EMAIL_HOOK_SECRET=<secret>
 //        supabase secrets set RESEND_API_KEY=<your-resend-key>
 //   3. In Resend: verify koe.moe as a sending domain, then update FROM below.
+//
+// Auth hooks are signed with the Standard Webhooks scheme — the payload is
+// verified via the webhook-id / webhook-timestamp / webhook-signature headers,
+// NOT an "Authorization: Bearer" header.
+
+import { Webhook } from "https://esm.sh/standardwebhooks@1.0.0";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")!;
 const HOOK_SECRET = Deno.env.get("SEND_EMAIL_HOOK_SECRET");
@@ -23,18 +29,31 @@ interface HookPayload {
 }
 
 Deno.serve(async (req: Request) => {
-  if (HOOK_SECRET) {
-    const auth = req.headers.get("Authorization");
-    if (auth !== `Bearer ${HOOK_SECRET}`) {
-      return new Response("Unauthorized", { status: 401 });
-    }
-  }
-
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
   }
 
-  const { user, email_data }: HookPayload = await req.json();
+  const raw = await req.text();
+
+  let user: HookPayload["user"];
+  let email_data: HookPayload["email_data"];
+
+  if (HOOK_SECRET) {
+    // Standard Webhooks verification. The dashboard secret is "v1,whsec_<base64>";
+    // the library expects just the base64 portion.
+    const wh = new Webhook(HOOK_SECRET.replace(/^v1,whsec_/, ""));
+    try {
+      ({ user, email_data } = wh.verify(
+        raw,
+        Object.fromEntries(req.headers),
+      ) as HookPayload);
+    } catch (err) {
+      console.error("Webhook verification failed:", err);
+      return new Response("Unauthorized", { status: 401 });
+    }
+  } else {
+    ({ user, email_data } = JSON.parse(raw) as HookPayload);
+  }
 
   const actionUrl =
     `${email_data.site_url}/auth/v1/verify` +
