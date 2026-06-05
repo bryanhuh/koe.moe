@@ -5,7 +5,8 @@
 //   2. Copy the generated hook secret (looks like "v1,whsec_..."), then run:
 //        supabase secrets set SEND_EMAIL_HOOK_SECRET=<secret>
 //        supabase secrets set RESEND_API_KEY=<your-resend-key>
-//   3. In Resend: verify koe.moe as a sending domain, then update FROM below.
+//   3. Optional: verify a sending domain in Resend, then set SEND_EMAIL_FROM.
+//      Until then the sandbox sender only delivers to your Resend account email.
 //
 // Auth hooks are signed with the Standard Webhooks scheme — the payload is
 // verified via the webhook-id / webhook-timestamp / webhook-signature headers,
@@ -15,7 +16,11 @@ import { Webhook } from "https://esm.sh/standardwebhooks@1.0.0";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")!;
 const HOOK_SECRET = Deno.env.get("SEND_EMAIL_HOOK_SECRET");
-const FROM = "Koe <noreply@koe.moe>";
+// Sender address. Defaults to Resend's sandbox sender, which works without a
+// verified domain but only delivers to your own Resend account email. Once a
+// domain is verified in Resend, set the SEND_EMAIL_FROM secret to override:
+//   supabase secrets set SEND_EMAIL_FROM="Koe <noreply@koe.moe>"
+const FROM = Deno.env.get("SEND_EMAIL_FROM") ?? "Koe <onboarding@resend.dev>";
 
 interface HookPayload {
   user: { id: string; email: string };
