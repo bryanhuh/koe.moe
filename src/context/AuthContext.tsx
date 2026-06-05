@@ -63,7 +63,10 @@ type AuthState = {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signInWithMagicLink: (email: string) => Promise<void>;
+  signInWithMagicLink: (
+    email: string,
+    options?: { shouldCreateUser?: boolean },
+  ) => Promise<void>;
   signOut: () => Promise<void>;
   // Signup wall
   signupWallOpen: boolean;
@@ -107,10 +110,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signInWithMagicLink = async (email: string) => {
+  const signInWithMagicLink = async (
+    email: string,
+    options?: { shouldCreateUser?: boolean },
+  ) => {
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: window.location.origin },
+      options: {
+        emailRedirectTo: window.location.origin,
+        shouldCreateUser: options?.shouldCreateUser ?? true,
+      },
     });
     if (error) throw error;
   };
