@@ -1,6 +1,8 @@
-import { Trash2 } from "lucide-react";
+import { Play, Trash2 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { PageHeader } from "../components/PageHeader";
 import { usePlayer } from "../context/PlayerContext";
+import type { LogEntry } from "../context/PlayerContext";
 
 const fmt = (ts: number) => {
   const d = new Date(ts);
@@ -36,17 +38,62 @@ export default function Logs() {
       ) : (
         <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-lg overflow-hidden font-mono text-xs">
           {logs.map((l) => (
-            <div
-              key={l.id}
-              className="grid grid-cols-[160px_1fr_1fr_80px] gap-4 px-4 py-2 border-b border-[#1a1a1a] last:border-b-0 hover:bg-[#161616]"
-            >
-              <span className="text-neutral-500">{fmt(l.playedAt)}</span>
-              <span className="text-white truncate">{l.trackTitle}</span>
-              <span className="text-neutral-400 truncate">{l.trackArtist}</span>
-              <span className="accent-text">▶ play</span>
-            </div>
+            <LogRow key={l.id} log={l} />
           ))}
         </div>
+      )}
+    </div>
+  );
+}
+
+function LogRow({ log }: { log: LogEntry }) {
+  const { resolveTrack, playTrack } = usePlayer();
+  const track = resolveTrack(log.trackId);
+
+  const play = () => {
+    if (track) playTrack(track.id, [track.id]);
+  };
+
+  return (
+    <div className="grid grid-cols-[150px_1fr_1fr_1fr_64px] gap-4 px-4 py-2 border-b border-[#1a1a1a] last:border-b-0 hover:bg-[#161616] items-center">
+      <span className="text-neutral-500">{fmt(log.playedAt)}</span>
+
+      {track ? (
+        <button
+          onClick={play}
+          className="text-left text-white truncate hover:accent-text transition-colors"
+          title={`Play ${log.trackTitle}`}
+        >
+          {log.trackTitle}
+        </button>
+      ) : (
+        <span className="text-white truncate">{log.trackTitle}</span>
+      )}
+
+      <span className="text-neutral-400 truncate">{log.trackArtist}</span>
+
+      {track ? (
+        <Link
+          to={`/albums/${track.albumId}`}
+          className="text-neutral-400 truncate hover:accent-text transition-colors"
+          title={track.album}
+        >
+          {track.album}
+        </Link>
+      ) : (
+        <span className="text-neutral-600 truncate">—</span>
+      )}
+
+      {track ? (
+        <button
+          onClick={play}
+          className="flex items-center gap-1 accent-text hover:opacity-80 justify-self-start"
+          aria-label={`Play ${log.trackTitle}`}
+        >
+          <Play size={11} fill="currentColor" /> play
+        </button>
+      ) : (
+        <span className="text-neutral-600 justify-self-start">—</span>
       )}
     </div>
   );
