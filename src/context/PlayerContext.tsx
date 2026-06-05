@@ -151,6 +151,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const currentTrackRef = useRef<Track | null>(null);
 
+  // The 'ended' listener is wired once (below), so it would otherwise capture
+  // the first render's handleEnded — with an empty queue and the initial repeat
+  // mode — and natural track-end would always just stop. Keep a ref pointing at
+  // the latest handleEnded so end-of-track uses the current queue/repeat.
+  const handleEndedRef = useRef<() => void>(() => {});
+
   const currentTrack: Track | null =
     currentIndex >= 0 && currentIndex < queue.length
       ? (trackCacheRef.current.get(queue[currentIndex]) ?? null)
@@ -197,8 +203,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const onTime = () => setProgress(a.currentTime);
     const onLoaded = () => setDuration(a.duration || 0);
     const onEnded = () => {
-      // handled below via state machine
-      handleEnded();
+      // Always invoke the latest handleEnded (see handleEndedRef above).
+      handleEndedRef.current();
     };
     const onPlay = () => setIsPlaying(true);
     const onPause = () => setIsPlaying(false);
@@ -353,6 +359,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       return idx;
     });
   }, [queue, repeat]);
+
+  // Keep the 'ended' listener pointed at the current handleEnded closure.
+  useEffect(() => {
+    handleEndedRef.current = handleEnded;
+  }, [handleEnded]);
 
   const playTrack = useCallback(
     (trackId: string, queueIds?: string[]) => {
