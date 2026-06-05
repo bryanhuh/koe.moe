@@ -19,6 +19,7 @@ import ThemeEditor from "./pages/ThemeEditor";
 import Settings from "./pages/Settings";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
+import Room from "./pages/Room";
 import Auth from "./pages/Auth";
 import { SignupWallModal } from "./components/SignupWallModal";
 import { ShareRoomModal } from "./components/ShareRoomModal";
@@ -60,6 +61,7 @@ function App() {
                             <Route path="/settings" element={<Settings />} />
                             <Route path="/privacy" element={<Privacy />} />
                             <Route path="/terms" element={<Terms />} />
+                            <Route path="/room/:code" element={<Room />} />
                           </Routes>
                         </div>
                       </main>
