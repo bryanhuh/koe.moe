@@ -54,6 +54,10 @@ type PlayerState = {
   registerTracks: (tracks: Track[]) => void;
   playTrack: (trackId: string, queueIds?: string[]) => void;
   playAlbum: (trackIds: string[], startId?: string) => void;
+  // Drive playback from a remote source (a listening-party host). Loads the
+  // track, seeks to positionMs, and matches play/pause — with drift tolerance
+  // so heartbeats don't cause stutter. Used by RoomContext for participants.
+  syncTo: (track: Track, positionMs: number, isPlaying: boolean) => void;
   togglePlay: () => void;
   next: () => void;
   prev: () => void;
@@ -157,6 +161,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   // the latest handleEnded so end-of-track uses the current queue/repeat.
   const handleEndedRef = useRef<() => void>(() => {});
 
+  // Position (ms) to seek to once the next track's metadata loads. Set by
+  // syncTo so a follower lands at the host's position even though the src
+  // hasn't finished loading at call time.
+  const pendingSeekMsRef = useRef<number | null>(null);
+
   const currentTrack: Track | null =
     currentIndex >= 0 && currentIndex < queue.length
       ? (trackCacheRef.current.get(queue[currentIndex]) ?? null)
@@ -201,7 +210,16 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     if (!a) return;
 
     const onTime = () => setProgress(a.currentTime);
-    const onLoaded = () => setDuration(a.duration || 0);
+    const onLoaded = () => {
+      setDuration(a.duration || 0);
+      // Apply a follower seek queued by syncTo before the src was ready.
+      if (pendingSeekMsRef.current != null) {
+        const sec = pendingSeekMsRef.current / 1000;
+        pendingSeekMsRef.current = null;
+        a.currentTime = sec;
+        setProgress(sec);
+      }
+    };
     const onEnded = () => {
       // Always invoke the latest handleEnded (see handleEndedRef above).
       handleEndedRef.current();
@@ -411,6 +429,34 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     [playTrack],
   );
 
+  const DRIFT_TOLERANCE_SEC = 1.5;
+
+  const syncTo = useCallback(
+    (track: Track, positionMs: number, playing: boolean) => {
+      trackCacheRef.current.set(track.id, track);
+      const targetSec = positionMs / 1000;
+      const cur = currentTrackRef.current;
+
+      if (cur?.id === track.id) {
+        // Same track: only correct meaningful drift, otherwise let it ride so
+        // heartbeats don't cause constant micro-seeks/stutter.
+        const a = audioRef.current;
+        if (a && Math.abs(a.currentTime - targetSec) > DRIFT_TOLERANCE_SEC) {
+          a.currentTime = targetSec;
+          setProgress(targetSec);
+        }
+      } else {
+        // New track: load it as a single-item queue and seek once it's ready.
+        pendingSeekMsRef.current = positionMs;
+        setOriginalQueue([track.id]);
+        setQueue([track.id]);
+        setCurrentIndex(0);
+      }
+      setIsPlaying(playing);
+    },
+    [],
+  );
+
   const togglePlay = useCallback(() => {
     if (!currentTrack) {
       // start something
@@ -557,6 +603,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     registerTracks,
     playTrack,
     playAlbum,
+    syncTo,
     togglePlay,
     next,
     prev,
