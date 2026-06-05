@@ -207,7 +207,13 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       handleEndedRef.current();
     };
     const onPlay = () => setIsPlaying(true);
-    const onPause = () => setIsPlaying(false);
+    const onPause = () => {
+      // Ending a track fires 'pause' as well as 'ended'. Ignore that one so
+      // auto-advance keeps playing — handleEnded owns the end-of-track
+      // transition (advance, repeat, or stop). Real user pauses have ended=false.
+      if (a.ended) return;
+      setIsPlaying(false);
+    };
 
     a.addEventListener("timeupdate", onTime);
     a.addEventListener("loadedmetadata", onLoaded);
