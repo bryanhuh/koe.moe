@@ -47,9 +47,12 @@ type RoomState = {
   unplayable: boolean;
   status: RoomStatus;
   error: string | null;
+  shareOpen: boolean;
   startParty: () => Promise<void>;
   joinRoom: (code: string) => Promise<void>;
   leaveRoom: () => Promise<void>;
+  openShare: () => void;
+  closeShare: () => void;
 };
 
 const RoomContext = createContext<RoomState | null>(null);
@@ -69,6 +72,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   const [unplayable, setUnplayable] = useState(false);
   const [status, setStatus] = useState<RoomStatus>("idle");
   const [error, setError] = useState<string | null>(null);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const channelRef = useRef<RealtimeChannel | null>(null);
   const isHostRef = useRef(false);
@@ -167,6 +171,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
     setParticipants([]);
     setUnplayable(false);
     setStatus("idle");
+    setShareOpen(false);
   }, []);
 
   const claimHost = useCallback(async () => {
@@ -265,6 +270,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
     isHostRef.current = true;
     setCode(roomCode);
     setIsHost(true);
+    setShareOpen(true);
     subscribeChannel(roomCode, true);
   }, [user, openSignupWall, loadProfile, subscribeChannel]);
 
@@ -368,9 +374,12 @@ export function RoomProvider({ children }: { children: ReactNode }) {
     unplayable,
     status,
     error,
+    shareOpen,
     startParty,
     joinRoom,
     leaveRoom,
+    openShare: () => setShareOpen(true),
+    closeShare: () => setShareOpen(false),
   };
 
   return <RoomContext.Provider value={value}>{children}</RoomContext.Provider>;

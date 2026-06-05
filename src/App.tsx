@@ -21,6 +21,7 @@ import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import Auth from "./pages/Auth";
 import { SignupWallModal } from "./components/SignupWallModal";
+import { ShareRoomModal } from "./components/ShareRoomModal";
 
 function App() {
   return (
@@ -70,6 +71,7 @@ function App() {
               />
             </Routes>
             <SignupWallModal />
+            <ShareRoomModal />
           </RoomProvider>
         </PlayerProvider>
       </AuthProvider>

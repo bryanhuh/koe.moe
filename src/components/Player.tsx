@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { usePlayer } from "../context/PlayerContext";
+import { StartPartyButton } from "./StartPartyButton";
 import { formatTime } from "../data/mockData";
 
 export function Player() {
@@ -52,7 +53,10 @@ export function Player() {
 
   return (
     <>
-      <NowPlayingView open={nowPlayingOpen} onClose={() => setNowPlayingOpen(false)} />
+      <NowPlayingView
+        open={nowPlayingOpen}
+        onClose={() => setNowPlayingOpen(false)}
+      />
 
       <div className="h-[88px] bg-[#0b0b0b] border-t border-[#1a1a1a] grid grid-cols-[1fr_2fr_1fr] items-center px-4 gap-4 relative z-10">
         {/* Left: track info — click to expand Now Playing */}
@@ -88,7 +92,9 @@ export function Player() {
               <button
                 onClick={() => toggleFavorite(currentTrack.id)}
                 className={`ml-1 p-1.5 rounded hover:bg-[#1a1a1a] transition-colors shrink-0 ${
-                  isFavorite(currentTrack.id) ? "accent-text" : "text-neutral-400"
+                  isFavorite(currentTrack.id)
+                    ? "accent-text"
+                    : "text-neutral-400"
                 }`}
                 aria-label="Toggle favorite"
               >
@@ -97,11 +103,14 @@ export function Player() {
                   fill={isFavorite(currentTrack.id) ? "currentColor" : "none"}
                 />
               </button>
+              <StartPartyButton variant="bar" />
             </>
           ) : (
             <>
               <div className="w-14 h-14 rounded bg-[#1a1a1a] shrink-0" />
-              <div className="text-xs text-neutral-500 font-mono">No track playing</div>
+              <div className="text-xs text-neutral-500 font-mono">
+                No track playing
+              </div>
             </>
           )}
         </div>
@@ -133,7 +142,11 @@ export function Player() {
               {isPlaying ? (
                 <Pause size={18} fill="currentColor" />
               ) : (
-                <Play size={18} fill="currentColor" className="translate-x-[1px]" />
+                <Play
+                  size={18}
+                  fill="currentColor"
+                  className="translate-x-[1px]"
+                />
               )}
             </button>
             <button
@@ -146,7 +159,9 @@ export function Player() {
             <button
               onClick={cycleRepeat}
               className={`transition-colors ${
-                repeat !== "off" ? "accent-text" : "text-neutral-400 hover:text-white"
+                repeat !== "off"
+                  ? "accent-text"
+                  : "text-neutral-400 hover:text-white"
               }`}
               aria-label="Cycle repeat"
             >
@@ -220,7 +235,13 @@ export function Player() {
 
 // ─── Now Playing expanded view ───────────────────────────────────────────────
 
-function NowPlayingView({ open, onClose }: { open: boolean; onClose: () => void }) {
+function NowPlayingView({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
   const {
     currentTrack,
     isPlaying,
@@ -300,7 +321,9 @@ function NowPlayingView({ open, onClose }: { open: boolean; onClose: () => void 
   const handleVideoWaiting = () => {
     clearStallTimer();
     stallTimerRef.current = setTimeout(() => {
-      disableVideo("Music video paused to keep your audio smooth on this connection.");
+      disableVideo(
+        "Music video paused to keep your audio smooth on this connection.",
+      );
     }, 7000);
   };
   const handleVideoError = () => {
@@ -416,7 +439,11 @@ function NowPlayingView({ open, onClose }: { open: boolean; onClose: () => void 
   }, [open, showVideo, coverPhase]);
 
   // Hero (large/centered) geometry plus the transform that lands it in the dock.
-  const heroSize = Math.min(window.innerWidth * 0.7, window.innerHeight * 0.5, 380);
+  const heroSize = Math.min(
+    window.innerWidth * 0.7,
+    window.innerHeight * 0.5,
+    380,
+  );
   const heroTop = window.innerHeight * 0.26;
   let dockTransform = "none";
   if (dockRect) {
@@ -491,7 +518,9 @@ function NowPlayingView({ open, onClose }: { open: boolean; onClose: () => void 
         <button
           onClick={cycleRepeat}
           className={`p-2 transition-colors ${
-            repeat !== "off" ? "accent-text" : "text-neutral-300 hover:text-white"
+            repeat !== "off"
+              ? "accent-text"
+              : "text-neutral-300 hover:text-white"
           }`}
           aria-label="Repeat"
         >
@@ -737,6 +766,9 @@ function NowPlayingView({ open, onClose }: { open: boolean; onClose: () => void 
               )}
             </div>
             {titleRow}
+            <div className="mb-5">
+              <StartPartyButton variant="full" />
+            </div>
             {transport}
           </div>
 
@@ -761,12 +793,17 @@ function QueuePopover({ onClose }: { onClose: () => void }) {
         <h3 className="text-sm font-mono uppercase tracking-wide text-neutral-300">
           Queue · {queue.length}
         </h3>
-        <button onClick={onClose} className="text-xs text-neutral-500 hover:text-white">
+        <button
+          onClick={onClose}
+          className="text-xs text-neutral-500 hover:text-white"
+        >
           Close
         </button>
       </div>
       {queue.length === 0 && (
-        <div className="px-4 py-6 text-sm text-neutral-500">Queue is empty.</div>
+        <div className="px-4 py-6 text-sm text-neutral-500">
+          Queue is empty.
+        </div>
       )}
       <ul>
         {queue.map((id, idx) => (
@@ -807,16 +844,24 @@ function QueueRow({
       }`}
       onClick={onPlay}
     >
-      <span className="text-[10px] font-mono text-neutral-500 w-5">{index + 1}</span>
+      <span className="text-[10px] font-mono text-neutral-500 w-5">
+        {index + 1}
+      </span>
       {t.coverUrl ? (
-        <img src={t.coverUrl} className="w-9 h-9 rounded object-cover shrink-0" alt="" />
+        <img
+          src={t.coverUrl}
+          className="w-9 h-9 rounded object-cover shrink-0"
+          alt=""
+        />
       ) : (
         <div className="w-9 h-9 rounded bg-[#1a1a1a] flex items-center justify-center shrink-0">
           <Music size={14} className="text-neutral-600" />
         </div>
       )}
       <div className="min-w-0 flex-1">
-        <div className={`text-sm truncate ${active ? "accent-text" : "text-white"}`}>
+        <div
+          className={`text-sm truncate ${active ? "accent-text" : "text-white"}`}
+        >
           {t.title}
         </div>
         <div className="text-xs text-neutral-400 truncate">{t.artist}</div>
