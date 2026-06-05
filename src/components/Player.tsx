@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { usePlayer } from "../context/PlayerContext";
+import { useRoom } from "../context/RoomContext";
 import { StartPartyButton } from "./StartPartyButton";
 import { formatTime } from "../data/mockData";
 
@@ -43,6 +44,10 @@ export function Player() {
     toggleFavorite,
     isFavorite,
   } = usePlayer();
+
+  const { isInRoom, isHost } = useRoom();
+  // Participants follow the host; their transport is read-only.
+  const following = isInRoom && !isHost;
 
   const [showQueue, setShowQueue] = useState(false);
   const [nowPlayingOpen, setNowPlayingOpen] = useState(false);
@@ -116,7 +121,12 @@ export function Player() {
         </div>
 
         {/* Center: controls */}
-        <div className="flex flex-col items-center gap-2">
+        <div
+          className={`flex flex-col items-center gap-2 ${
+            following ? "opacity-50 pointer-events-none" : ""
+          }`}
+          title={following ? "Only the host can control playback" : undefined}
+        >
           <div className="flex items-center gap-5">
             <button
               onClick={toggleShuffle}
@@ -262,6 +272,13 @@ function NowPlayingView({
     toggleFavorite,
     isFavorite,
   } = usePlayer();
+  const { isInRoom, isHost } = useRoom();
+  // Participants follow the host; their transport is read-only.
+  const following = isInRoom && !isHost;
+  const lockCls = following ? "opacity-50 pointer-events-none" : "";
+  const lockTitle = following
+    ? "Only the host can control playback"
+    : undefined;
 
   const pct = duration > 0 ? (progress / duration) * 100 : 0;
   const VolumeIcon =
@@ -457,7 +474,7 @@ function NowPlayingView({
   const transport = (
     <>
       {/* Seek bar */}
-      <div className="mb-5">
+      <div className={`mb-5 ${lockCls}`} title={lockTitle}>
         <div className="relative mb-2">
           <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
             <div className="h-full accent-bg" style={{ width: `${pct}%` }} />
@@ -480,7 +497,10 @@ function NowPlayingView({
       </div>
 
       {/* Controls */}
-      <div className="flex items-center justify-between mb-6">
+      <div
+        className={`flex items-center justify-between mb-6 ${lockCls}`}
+        title={lockTitle}
+      >
         <button
           onClick={toggleShuffle}
           className={`p-2 transition-colors ${

@@ -5,6 +5,7 @@ import { AuthProvider } from "./context/AuthContext";
 import { Sidebar } from "./components/Sidebar";
 import { BottomNav } from "./components/BottomNav";
 import { Player } from "./components/Player";
+import { RoomBanner } from "./components/RoomBanner";
 import Home from "./pages/Home";
 import Search from "./pages/Search";
 import Library from "./pages/Library";
@@ -66,6 +67,7 @@ function App() {
                         </div>
                       </main>
                     </div>
+                    <RoomBanner />
                     <Player />
                     <BottomNav />
                   </div>
